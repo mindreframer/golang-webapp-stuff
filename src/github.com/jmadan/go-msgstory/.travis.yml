@@ -1,0 +1,18 @@
+language: go
+
+before_install:
+  - go get 
+
+install:
+  - echo $GOPATH
+  - mkdir -p $GOPATH/src/github.com
+  - mv $HOME/build/jmadan $GOPATH/src/github.com/
+  - cd $GOPATH/src/github.com/jmadan/go-msgstory
+  - echo $PWD
+  - go install .
+
+script:
+  - go test ./...
+
+notifications:
+  email: false
