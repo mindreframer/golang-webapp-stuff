@@ -1,0 +1,6 @@
+https://github.com/StefanKjartansson/fyrirtaekjaskra.git
+https://github.com/jingweno/progmob.git
+https://github.com/jmadan/go-msgstory.git
+https://github.com/tanema/mgorx.git
+https://github.com/robfig/revel.git
+https://github.com/jimmykuu/gopher.git
