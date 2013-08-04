@@ -1,0 +1,6 @@
+*~
+*.bak
+*sw[po]
+.DS_Store
+*.db
+.vagrant
