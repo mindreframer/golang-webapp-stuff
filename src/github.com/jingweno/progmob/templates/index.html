@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="progMob">
+<head>
+    <meta charset="utf-8" />
+    <title>Programming Mob</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Loading Bootstrap -->
+    <link href="assets/bootstrap/css/bootstrap.css" rel="stylesheet" />
+    <link href="assets/bootstrap/css/bootstrap-responsive.css" rel="stylesheet" />
+
+    <!-- Loading Flat UI -->
+    <link href="assets/css/flat-ui.css" rel="stylesheet" />
+    <link href="assets/css/styles.css" rel="stylesheet" />
+
+    <link rel="shortcut icon" href="assets/images/favicon.ico" />
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements. All other JS at the end of file. -->
+    <!--[if lt IE 9]><script src="js/html5shiv.js"></script><![endif]-->
+</head>
+<body>
+<div class="navbar navbar-inverse navbar-fixed-top">
+  <div class="navbar-inner">
+    <div class="container-fluid">
+      <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target="#nav-collapse-01"></button>
+      <a href="/" class="brand">Programming Mob</a>
+      <div class="nav-collapse collapse" id="nav-collapse-01">
+        <ul class="nav pull-right">
+          <li class="divider"></li>
+          {{if .UserLogin}}
+          <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{.UserLogin}} <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+            <li><a href="#">Settings</a></li>
+            <li class="divider"></li>
+            <li><a href="/logout">Sign out</a></li>
+          </ul>
+          </li>
+          {{else}}
+          <li>
+          <a href="/login">
+            Sign in with GitHub
+          </a>
+          </li>
+          {{end}}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row-fluid">
+    <div class="span3" ng-controller="MobsCtrl">
+      <div class="page-header">
+        <button class="btn btn-primary" ng-click="openJoinDialog()">
+          <i class="fui-bubble"></i>
+          Join Room
+        </button>
+      </div>
+      <ul class="nav nav-list" ng-repeat="(owner, mobs) in mobsGroupByOwner">
+        <li class="nav-header">{{`{{owner}}`}}</li>
+        <li ng-class="{'active': currentMob == mob}" ng-click="setCurrentMob(mob)" ng-repeat="mob in mobs">
+        <a href="#">
+         {{`{{mob.RepoName|truncate:39}}`}}
+          <span class="nav-counter">20</span>
+        </a>
+        </li>
+        <li class="divider"></li>
+      </ul>
+    </div>
+
+
+    <div class="span7" ng-controller="MessagesCtrl">
+      <div class="page-header">
+        <h5>Chat</h5>
+      </div>
+
+      <div class="row-fluid" ng-repeat="message in messages">
+        <div class="media">
+          <div class="span1">
+            <a class="pull-left" href="#">
+              <img class="span11" {{htmlattr `ng-src="{{message.user.avatarURL}}"`}} alt="" />
+            </a>
+          </div>
+
+          <div class="span11 media-body">
+
+            <div class="media-heading">
+              <strong><a href="">{{`{{message.user.login}}`}}</a></strong>
+              <small class="muted pull-right">{{`{{message.createdAt}}`}}</small>
+            </div>
+
+            {{"{{message.text}}"}}
+
+          </div>
+        </div>
+
+        <hr/>
+      </div>
+
+      <div class="row-fluid">
+
+        <form>
+          <div class="span10">
+            <input type="text" autofocus="true" placeholder="What's up?" ng-model="message.text"></input>
+          </div>
+          <div class="span2">
+            <button class="btn btn-primary" ng-click="sendMessage(message)">
+              <i class="fui-chat"></i>
+              Send
+            </button>
+          </div>
+        </div>
+      </form>
+
+
+    </div>
+
+
+  </div>
+
+</div>
+
+</div>
+
+</div>
+<!-- /.container -->
+
+
+<!-- Load JS here for greater good =============================-->
+<script src="assets/js/jquery-1.8.3.min.js"></script>
+<script src="assets/js/jquery-ui-1.10.3.custom.min.js"></script>
+<script src="assets/js/jquery.ui.touch-punch.min.js"></script>
+<script src="assets/js/bootstrap.min.js"></script>
+<script src="assets/js/bootstrap-select.js"></script>
+<script src="assets/js/bootstrap-switch.js"></script>
+<script src="assets/js/flatui-checkbox.js"></script>
+<script src="assets/js/flatui-radio.js"></script>
+<script src="assets/js/jquery.tagsinput.js"></script>
+<script src="assets/js/jquery.placeholder.js"></script>
+<script src="assets/js/jquery.stacktable.js"></script>
+<script src="assets/js/underscore-min.js"></script>
+<script src="assets/js/angular.js"></script>
+<script src="assets/js/ui-bootstrap-tpls.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
