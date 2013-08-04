@@ -1,0 +1,4 @@
+#!/bin/sh
+SCRIPTPATH=`dirname "$0"`
+chmod u+x "$SCRIPTPATH/{{.BinName}}"
+"$SCRIPTPATH/{{.BinName}}" -importPath {{.ImportPath}} -srcPath "$SCRIPTPATH/src" -runMode prod
