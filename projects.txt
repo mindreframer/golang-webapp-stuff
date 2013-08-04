@@ -4,3 +4,4 @@ https://github.com/jmadan/go-msgstory.git
 https://github.com/tanema/mgorx.git
 https://github.com/robfig/revel.git
 https://github.com/jimmykuu/gopher.git
+https://github.com/emicklei/mora.git
