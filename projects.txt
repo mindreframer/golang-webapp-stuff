@@ -8,3 +8,4 @@ https://github.com/emicklei/mora.git
 https://github.com/emicklei/landskape.git
 https://github.com/emicklei/go-restful.git
 https://github.com/ku-ovdp/api.git
+https://github.com/alouca/MongoQueue.git
