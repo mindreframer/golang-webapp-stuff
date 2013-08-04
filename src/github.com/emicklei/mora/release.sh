@@ -5,7 +5,7 @@ rm -rf target
 mkdir -p target/swagger-ui
 mv configuration ./target/mora
 cp mora.properties ./target
-cp -r /Users/ernest/Projects/swagger-ui/dist ./target/swagger-ui/dist
+cp -r ./swagger-ui/dist ./target/swagger-ui/dist
 
 # apply patches
 cp patches/index.html ./target/swagger-ui/dist

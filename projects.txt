@@ -5,3 +5,4 @@ https://github.com/tanema/mgorx.git
 https://github.com/robfig/revel.git
 https://github.com/jimmykuu/gopher.git
 https://github.com/emicklei/mora.git
+https://github.com/emicklei/landskape.git
