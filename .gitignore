@@ -1,0 +1,12 @@
+.DS_Store
+/bin/vole
+/bin/vole.exe
+/vole
+/pkg
+*.o
+*.a
+config.json
+/node_modules
+/dist
+*.sublime-project
+*.sublime-workspace
