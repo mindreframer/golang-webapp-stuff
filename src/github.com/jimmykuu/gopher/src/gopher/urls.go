@@ -19,6 +19,7 @@ var (
 		Handler{"/", Everyone, indexHandler},
 		Handler{"/about", Everyone, staticHandler("about.html")},
 		Handler{"/faq", Everyone, staticHandler("faq.html")},
+		Handler{"/timeline", Everyone, staticHandler("timeline.html")},
 		Handler{"/search", Everyone, searchHandler},
 		Handler{"/admin", Administrator, adminHandler},
 		Handler{"/admin/nodes", Administrator, adminListNodesHandler},
@@ -91,5 +92,7 @@ var (
 		Handler{"/p/{packageId}", Everyone, showPackageHandler},
 		Handler{"/p/{packageId}/edit", Authenticated, editPackageHandler},
 		Handler{"/p/{packageId}/delete", Administrator, deletePackageHandler},
+
+		Handler{"/download", Everyone, downloadHandler},
 	}
 )
