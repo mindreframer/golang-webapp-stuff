@@ -74,34 +74,23 @@ type LocationService struct {
 
 //*************Conversation Service Methods ***********
 func (serv ConversationService) CreateConversation(posted string) {
-	var cdata, mdata ReturnData.ReturnData
+	var returnData ReturnData.ReturnData
 	var formData []string
-	formData = strings.Split(posted, "&")
-	conversationData := strings.Split(formData[0], "=")
-	messageData := strings.Split(formData[1], "=")
-
+	formData = strings.Split(posted, "=")
 	conv := Conversation.Conversation{}
-	savedConversation := Conversation.Conversation{}
-	msg := Msg.Message{}
-	err := json.Unmarshal([]byte(conversationData[1]), &conv)
+	err := json.Unmarshal([]byte(formData[1]), &conv)
 	if err != nil {
-		log.Println(err.Error())
-		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride(nil)
+		log.Println("conversation marshelling error>>>>>" + err.Error())
+		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(err.Error()))
 		return
 	} else {
-		cdata, savedConversation = conv.CreateConversation()
-	}
-	if cdata.Success {
-		msg.JsonToMsg(messageData[1])
-		mdata = msg.SaveMessage(savedConversation.Id.Hex())
-	} else {
-		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(cdata.ToString()))
+		returnData, _ = conv.CreateConversation()
 	}
 
-	if cdata.Success && mdata.Success {
-		serv.ResponseBuilder().SetResponseCode(201).Write([]byte(cdata.ToString()))
+	if returnData.Success {
+		serv.ResponseBuilder().SetResponseCode(201).Write([]byte(returnData.ToString()))
 	} else {
-		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(cdata.ToString()))
+		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(returnData.ToString()))
 	}
 
 }
@@ -239,37 +228,38 @@ func (serv MsgService) SaveMessage(posted, convoId string) {
 
 //*************User Service Methods ***************
 func (serv UserService) RegisterUser(posted string) {
+
+	type newUser struct {
+		Name     string `json:"name" bson:"name"`
+		Email    string `json:"email" bson:"email"`
+		Handle   string `json:"handle" bson:"handle"`
+		Password string `json:"password" bson:"password"`
+	}
+
+	var data ReturnData.ReturnData
 	var formData []string
-	var questionmark int
-	// var jsonObject string
-	if strings.Contains(posted, "?") {
-		questionmark = strings.Index(posted, "?")
-	}
-
-	if questionmark == 0 {
-		formData = strings.Split(posted[1:], "&")
-	} else {
-		formData = strings.Split(posted, "&")
-	}
-
-	// jsonObject = "{"
-	// for i := 0; i < len(formData); i++ {
-	// 	jsonObject += "\"" + formData[i][:strings.Index(formData[i], "=")] + "\":\"" + formData[i][strings.Index(formData[i], "=")+1:] + "\""
-	// 	if i != len(formData)-1 {
-	// 		jsonObject += ","
-	// 	}
-	// }
-	// jsonObject += "}"
-	// jsonObject = "{\"" + formData[0][:strings.Index(formData[0], "=")] + "\":\"" + formData[0][strings.Index(formData[0], "=")+1:] + "\""
-	// jsonObject += "\"" + formData[1][:strings.Index(formData[1], "=")] + "\":\"" + formData[1][strings.Index(formData[1], "=")+1:] + "\"}"
-	user_id := User.CreateUserLogin(formData[1][strings.Index(formData[1], "=")+1:], formData[3][strings.Index(formData[3], "=")+1:])
+	formData = strings.Split(posted, "=")
 	user := User.User{}
-	user.UserId, _ = strconv.Atoi(user_id)
-	user.Name = formData[0][strings.Index(formData[0], "=")+1:]
-	user.Email = formData[1][strings.Index(formData[1], "=")+1:]
-	user.Handle = formData[2][strings.Index(formData[2], "=")+1:]
-	user.CreateUser()
-	log.Println(user)
+	tempUser := newUser{}
+	err := json.Unmarshal([]byte(formData[1]), &tempUser)
+
+	if err != nil {
+		log.Println(err.Error())
+		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride(nil)
+		return
+	} else {
+		user_id := User.CreateUserLogin(tempUser.Email, tempUser.Password)
+		user.UserId, _ = strconv.Atoi(user_id)
+		user.Name = tempUser.Name
+		user.Email = tempUser.Email
+		user.Handle = tempUser.Handle
+		data = user.CreateUser()
+	}
+	if data.Success {
+		serv.ResponseBuilder().SetResponseCode(201).Write([]byte(data.ToString()))
+	} else {
+		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(data.ToString()))
+	}
 }
 
 func (serv UserService) CreateUser(uemail, pass string) string {

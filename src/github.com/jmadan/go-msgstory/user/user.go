@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	Connection "github.com/jmadan/go-msgstory/connection"
 	Message "github.com/jmadan/go-msgstory/message"
+	RD "github.com/jmadan/go-msgstory/util"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"log"
@@ -29,18 +30,6 @@ type User struct {
 type rels struct {
 	Messages []Message.Message `json:"messages" bson:"messages"`
 }
-
-// type JSONUser struct {
-// 	UserId int    `json:"userid" bson:"userid"`
-// 	Uid    int    `json:"uid" bson:"uid"`
-// 	Name   string `json:"name" bson:"name"`
-// 	// Age         int    `json:"age" bson:"age"`
-// 	Email       string    `json:"email" bson:"email"`
-// 	Handle      string    `json:"handle" bson:"handle"`
-// 	PhoneNumber string    `json:"phone" bson:"phone"`
-// 	Relations   rels      `json:"relations" bson:"relations"`
-// 	Created_on  time.Time `json:"created_on" bson:"created_on"`
-// }
 
 func (u *User) SetEmail(email string) {
 	u.Email = email
@@ -129,19 +118,30 @@ func (u *User) GetByHandle() User {
 	return result
 }
 
-func (u *User) CreateUser() bool {
-
+func (u *User) CreateUser() RD.ReturnData {
+	returnData := RD.ReturnData{}
 	dbSession := Connection.GetDBSession()
 	dbSession.SetMode(mgo.Monotonic, true)
 	dataBase := strings.SplitAfter(os.Getenv("MONGOHQ_URL"), "/")
 	c := dbSession.DB(dataBase[3]).C("jove")
 
+	u.Id = bson.NewObjectId()
+	u.Created_on = time.Now()
+
 	err := c.Insert(u)
 	if err != nil {
 		log.Print(err.Error())
-		return false
+		returnData.ErrorMsg = err.Error()
+		returnData.Success = false
+		returnData.Status = "422"
+	} else {
+		returnData.Success = true
+		jsonData, _ := json.Marshal(&u)
+		returnData.JsonData = jsonData
+		returnData.Status = "201"
 	}
-	return true
+
+	return returnData
 }
 
 func CreateUserLogin(useremail, password string) string {
@@ -178,7 +178,7 @@ func CreateUserLogin(useremail, password string) string {
 	return userid
 }
 
-func getUserByEmail(user_email string) string {
+func GetUserByEmail(user_email string) string {
 	dburl := os.Getenv("DATABASE_URL")
 	db, err := sql.Open("mysql", dburl[8:])
 	if err != nil {

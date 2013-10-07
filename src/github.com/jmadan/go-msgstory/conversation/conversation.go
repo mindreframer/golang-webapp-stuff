@@ -3,12 +3,12 @@ package conversation
 import (
 	"encoding/json"
 	// SJ "github.com/bitly/go-simplejson"
+	"fmt"
 	Group "github.com/jmadan/go-msgstory/circle"
 	Connection "github.com/jmadan/go-msgstory/connection"
 	Location "github.com/jmadan/go-msgstory/geolocation"
 	Msg "github.com/jmadan/go-msgstory/message"
-	// User "github.com/jmadan/go-msgstory/user"
-	"fmt"
+	User "github.com/jmadan/go-msgstory/user"
 	RD "github.com/jmadan/go-msgstory/util"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -18,13 +18,24 @@ import (
 	"time"
 )
 
+// type Conversation struct {
+// 	Id          bson.ObjectId        `json:"_id" bson:"_id,omitempty"`
+// 	Title       string               `json:"title" bson:"title"`
+// 	Messages    []Msg.Message        `json:"messages" bson:"messages"`
+// 	Venue       Location.GeoLocation `json:"venue" bson:"venue"`
+// 	Circles     []Group.Circle       `json:"circles" bson:"circles"`
+// 	ConvOwner   string               `json:"creator" bson:"creator"`
+// 	Is_Approved bool                 `json:"is_approved" bson:"is_approved"`
+// 	Created_On  time.Time            `json:"created_on" bson:"created_on,omitempty"`
+// }
+
 type Conversation struct {
 	Id          bson.ObjectId        `json:"_id" bson:"_id,omitempty"`
 	Title       string               `json:"title" bson:"title"`
 	Messages    []Msg.Message        `json:"messages" bson:"messages"`
 	Venue       Location.GeoLocation `json:"venue" bson:"venue"`
 	Circles     []Group.Circle       `json:"circles" bson:"circles"`
-	ConvOwner   string               `json:"creator" bson:"creator"`
+	ConvOwner   User.User            `json:"user" bson:"user"`
 	Is_Approved bool                 `json:"is_approved" bson:"is_approved"`
 	Created_On  time.Time            `json:"created_on" bson:"created_on,omitempty"`
 }
