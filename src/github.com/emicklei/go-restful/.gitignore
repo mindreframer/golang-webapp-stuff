@@ -42,3 +42,20 @@ examples/restful-resource-functions
 examples/restful-serve-static
 
 examples/restful-user-service
+
+*.DS_Store
+examples/restful-user-resource
+
+examples/restful-multi-containers
+
+examples/restful-form-handling
+
+examples/restful-CORS-filter
+
+examples/restful-options-filter
+
+examples/restful-curly-router
+
+examples/restful-cpuprofiler-service
+
+examples/restful-pre-post-filters

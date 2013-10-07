@@ -1,5 +1,9 @@
 package restful
 
+// Copyright 2013 Ernest Micklei. All rights reserved.
+// Use of this source code is governed by a license
+// that can be found in the LICENSE file.
+
 import (
 	"encoding/json"
 	"encoding/xml"
@@ -19,12 +23,16 @@ var DefaultResponseMimeType string
 // It provides several convenience methods to prepare and write response content.
 type Response struct {
 	http.ResponseWriter
-	accept   string   // content-types what the Http Request says it want to receive
-	produces []string // content-types what the Route says it can produce
+	accept     string   // content-types what the Http Request says it want to receive
+	produces   []string // content-types what the Route says it can produce
+	statusCode int      // HTTP status code that has been written explicity (if zero then net/http has written 200)
 }
 
-// InternalServerError is a shortcut for .WriteHeader(http.StatusInternalServerError)
-// DEPRECATED, use the long version
+func newResponse(httpWriter http.ResponseWriter) *Response {
+	return &Response{httpWriter, "", []string{}, http.StatusOK} // empty content-types
+}
+
+// DEPRECATED, use r.WriteHeader(http.StatusInternalServerError)
 func (r Response) InternalServerError() Response {
 	r.WriteHeader(http.StatusInternalServerError)
 	return r
@@ -72,7 +80,7 @@ func (r Response) WriteEntity(value interface{}) Response {
 		r.WriteAsXml(value)
 	} else {
 		r.WriteHeader(http.StatusNotAcceptable)
-		r.Write([]byte("406: Not Acceptable"))
+		io.WriteString(r, "406: Not Acceptable")
 	}
 	return r
 }
@@ -84,7 +92,7 @@ func (r Response) WriteAsXml(value interface{}) Response {
 		r.WriteError(http.StatusInternalServerError, err)
 	} else {
 		r.Header().Set(HEADER_ContentType, MIME_XML)
-		r.Write([]byte(xml.Header))
+		io.WriteString(r, xml.Header)
 		r.Write(output)
 	}
 	return r
@@ -102,13 +110,9 @@ func (r Response) WriteAsJson(value interface{}) Response {
 	return r
 }
 
-// WriteError is a convenience method for an error HTTP status with the actual error
+// DEPRECATED; use WriteErrorString(status,reason)
 func (r Response) WriteError(httpStatus int, err error) Response {
-	r.WriteHeader(httpStatus)
-	if err != nil {
-		io.WriteString(r, err.Error())
-	}
-	return r
+	return r.WriteErrorString(httpStatus, err.Error())
 }
 
 // WriteServiceError is a convenience method for a responding with a ServiceError and a status
@@ -118,9 +122,24 @@ func (r Response) WriteServiceError(httpStatus int, err ServiceError) Response {
 	return r
 }
 
-// WriteError is a convenience method for an error status with the actual error
+// WriteErrorString is a convenience method for an error status with the actual error
 func (r Response) WriteErrorString(status int, err string) Response {
 	r.WriteHeader(status)
 	io.WriteString(r, err)
 	return r
+}
+
+// WriteHeader is overridden to remember the Status Code that has been written.
+func (r *Response) WriteHeader(httpStatus int) {
+	r.statusCode = httpStatus
+	r.ResponseWriter.WriteHeader(httpStatus)
+}
+
+// StatusCode returns the code that has been written using WriteHeader.
+func (r Response) StatusCode() int {
+	if 0 == r.statusCode {
+		// no status code has been written yet; assume OK
+		return http.StatusOK
+	}
+	return r.statusCode
 }

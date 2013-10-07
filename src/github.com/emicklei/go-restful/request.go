@@ -1,5 +1,9 @@
 package restful
 
+// Copyright 2013 Ernest Micklei. All rights reserved.
+// Use of this source code is governed by a license
+// that can be found in the LICENSE file.
+
 import (
 	"encoding/json"
 	"encoding/xml"
@@ -13,6 +17,11 @@ import (
 type Request struct {
 	Request        *http.Request
 	pathParameters map[string]string
+	attributes     map[string]interface{} // for storing request-scoped values
+}
+
+func newRequest(httpRequest *http.Request) *Request {
+	return &Request{httpRequest, map[string]string{}, map[string]interface{}{}} // empty parameters, attributes
 }
 
 // PathParameter accesses the Path parameter value by its name
@@ -20,9 +29,23 @@ func (r *Request) PathParameter(name string) string {
 	return r.pathParameters[name]
 }
 
+// PathParameters accesses the Path parameter values
+func (r *Request) PathParameters() map[string]string {
+	return r.pathParameters
+}
+
 // QueryParameter returns the (first) Query parameter value by its name
 func (r *Request) QueryParameter(name string) string {
 	return r.Request.FormValue(name)
+}
+
+// BodyParameter parses the body of the request (once for typically a POST or a PUT) and returns the value of the given name or an error.
+func (r *Request) BodyParameter(name string) (string, error) {
+	err := r.Request.ParseForm()
+	if err != nil {
+		return "", err
+	}
+	return r.Request.PostFormValue(name), nil
 }
 
 // HeaderParameter returns the HTTP Header value of a Header name or empty if missing
@@ -47,4 +70,14 @@ func (r *Request) ReadEntity(entityPointer interface{}) error {
 		}
 	}
 	return err
+}
+
+// SetAttribute adds or replaces the attribute with the given value.
+func (r *Request) SetAttribute(name string, value interface{}) {
+	r.attributes[name] = value
+}
+
+// Attribute returns the value associated to the given name. Returns nil if absent.
+func (r Request) Attribute(name string) interface{} {
+	return r.attributes[name]
 }

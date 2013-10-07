@@ -1,8 +1,8 @@
-// Copyright 2012 Ernest Micklei. All rights reserved.
+package restful
+
+// Copyright 2013 Ernest Micklei. All rights reserved.
 // Use of this source code is governed by a license
 // that can be found in the LICENSE file.
-
-package restful
 
 import (
 	"net/http"
@@ -17,7 +17,7 @@ type Route struct {
 	Method   string
 	Produces []string
 	Consumes []string
-	Path     string
+	Path     string // webservice root path + described path
 	Function RouteFunction
 	Filters  []FilterFunction
 
@@ -41,14 +41,16 @@ func (self *Route) postBuild() {
 // Create Request and Response from their http versions
 func (self *Route) wrapRequestResponse(httpWriter http.ResponseWriter, httpRequest *http.Request) (*Request, *Response) {
 	params := self.extractParameters(httpRequest.URL.Path)
-	accept := httpRequest.Header.Get(HEADER_Accept)
-	wrappedRequest := &Request{httpRequest, params}
-	wrappedResponse := &Response{httpWriter, accept, self.Produces}
+	wrappedRequest := newRequest(httpRequest)
+	wrappedRequest.pathParameters = params
+	wrappedResponse := newResponse(httpWriter)
+	wrappedResponse.accept = httpRequest.Header.Get(HEADER_Accept)
+	wrappedResponse.produces = self.Produces
 	return wrappedRequest, wrappedResponse
 }
 
-// Extract any path parameters from the the request URL path and call the function
-func (self *Route) dispatch(wrappedRequest *Request, wrappedResponse *Response) {
+// dispatchWithFilters call the function after passing through its own filters
+func (self *Route) dispatchWithFilters(wrappedRequest *Request, wrappedResponse *Response) {
 	if len(self.Filters) > 0 {
 		chain := FilterChain{Filters: self.Filters, Target: self.Function}
 		chain.ProcessFilter(wrappedRequest, wrappedResponse)
@@ -62,7 +64,12 @@ func (self *Route) dispatch(wrappedRequest *Request, wrappedResponse *Response) 
 func (self Route) matchesAccept(mimeTypesWithQuality string) bool {
 	parts := strings.Split(mimeTypesWithQuality, ",")
 	for _, each := range parts {
-		withoutQuality := strings.Split(each, ";")[0]
+		var withoutQuality string
+		if strings.Contains(each, ";") {
+			withoutQuality = strings.Trim(strings.Split(each, ";")[0], " ")
+		} else {
+			withoutQuality = each
+		}
 		if withoutQuality == "*/*" {
 			return true
 		}
@@ -79,8 +86,14 @@ func (self Route) matchesAccept(mimeTypesWithQuality string) bool {
 func (self Route) matchesContentType(mimeTypes string) bool {
 	parts := strings.Split(mimeTypes, ",")
 	for _, each := range parts {
+		var contentType string
+		if strings.Contains(each, ";") {
+			contentType = strings.Trim(strings.Split(each, ";")[0], " ")
+		} else {
+			contentType = each
+		}
 		for _, other := range self.Consumes {
-			if other == "*/*" || other == each {
+			if other == "*/*" || other == contentType {
 				return true
 			}
 		}
@@ -112,4 +125,9 @@ func tokenizePath(path string) []string {
 		return []string{}
 	}
 	return strings.Split(strings.Trim(path, "/"), "/")
+}
+
+// for debugging
+func (r Route) String() string {
+	return r.Method + " " + r.Path
 }

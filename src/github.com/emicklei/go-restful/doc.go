@@ -1,65 +1,37 @@
 /*
 Package go-restful, a lean package for creating REST-style WebServices without magic.
 
-Example WebService:
-
-	package landscapeservice
-
-	import (
-	    "github.com/emicklei/go-restful"
-	)
-
-	func New() *restful.WebService {
-		ws := new(restful.WebService)
-	   	ws.Path("/applications").
-			Consumes(restful.MIME_XML, restful.MIME_JSON).
-			Produces(restful.MIME_XML, restful.MIME_JSON)
-
-		ws.Route(ws.GET("/{id}").To(getApplication).
-			// for documentation
-			Doc("Get the Application node by its id").
-			Operation("getApplication").
-			Param(ws.PathParameter("id" , "the identifier for an application node")).
-			Param(ws.QueryParameter("environment" , "the scope in which the application node lives")).
-			Writes(Application{})) // to the response
-
-		ws.Route(ws.POST("/").To(saveApplication).
-			// for documentation
-			Doc("Create or update the Application node").
-			Operation("saveApplication").
-			Reads(Application{})) // from the request
-		return ws
-	}
-	func getApplication(request *restful.Request, response *restful.Response) {
-			id := request.PathParameter("id")
-			env := request.QueryParameter("environment")
-			...
-	}
-	func saveApplication(request *restful.Request, response *restful.Response) {
-		   response.AddHeader("X-Something","other")
-		   ...
-		   response.WriteEntity(anApp) // uses Accept header to detect XML/JSON
-
-	}
-
-Example main:
-
-	func main() {
-		restful.Add(landscapeservice.New())
-		log.Fatal(http.ListenAndServe(":8080", nil))
-	}
-
-
-WebServices
+WebServices and Routes
 
 A WebService has a collection of Route objects that dispatch incoming Http Requests to a function calls.
-
-	type RouteFunction func(*restful.Request, *restful.Response)
+Typically, a WebService has a root path (e.g. /users) and defines common MIME types for its routes.
+WebServices must be added to a container (see below) in order to handler Http requests from a server.
 
 A Route is defined by a HTTP method, an URL path and (optionally) the MIME types it consumes (Content-Type) and produces (Accept).
 This package has the logic to find the best matching Route and if found, call its Function.
+
+	ws := new(restful.WebService)
+	ws.
+		Path("/users").
+		Consumes(restful.MIME_XML, restful.MIME_JSON).
+		Produces(restful.MIME_JSON, restful.MIME_XML)
+	ws.Route(ws.GET("/{id}").To(u.findUser))  // u is a UserResource
+	...
+	// GET http://localhost:8080/users/1
+	func (u UserResource) findUser(request *restful.Request, response *restful.Response) {
+		id := request.PathParameter("user-id")
+
 The (*Request, *Response) arguments provide functions for reading information from the request and writing information back to the response.
 
+Containers
+
+A Container holds a collection of WebServices, Filters and a http.ServeMux for multiplexing http requests.
+Using the statements "restful.Add(...) and restful.Filter(...)" will register WebServices and Filters to the Default Container.
+The Default container of go-restful uses the http.DefaultServeMux.
+You can create your own Container and create a new http.Server for that particular container.
+
+	container := restful.NewContainer()
+	server := &http.Server{Addr: ":8081", Handler: container}
 
 Filters
 
@@ -74,13 +46,12 @@ Use the following statement to pass the request,response pair to the next filter
 
 	chain.ProcessFilter(req, resp)
 
-Global Filters
+Container Filters
 
 These are processed before any registered WebService.
 
-	// install a global filter (processed before any webservice)
+	// install a (global) filter for the default container (processed before any webservice)
 	restful.Filter(globalLogging)
-
 
 WebService Filters
 
@@ -100,6 +71,63 @@ These are processed before calling the function associated with the Route.
 
 See the example https://github.com/emicklei/go-restful/blob/master/examples/restful-filters.go with full implementations.
 
+Response Encoding
+
+Two encodings are supported: gzip and deflate. To enable this for all responses:
+
+	restful.DefaultContainer.EnableContentEncoding(true)
+
+If a Http request includes the Accept-Encoding header then the response content will be compressed using the specified encoding.
+
+Alternatively, you can create a Filter that performs the encoding and install it per WebService or Route.
+See the example https://github.com/emicklei/go-restful/blob/master/examples/restful-encoding-filter.go
+
+OPTIONS support
+
+By installing a pre-defined container filter, your Webservice(s) can respond to the OPTIONS Http request.
+
+	Filter(OPTIONSFilter())
+
+CORS
+
+By installing the filter of a CrossOriginResourceSharing (CORS), your WebService(s) can handle CORS requests.
+
+	cors := CrossOriginResourceSharing{ExposeHeaders: []string{"X-My-Header"}, CookiesAllowed: false, Container: DefaultContainer}
+	Filter(cors.Filter)
+
+Error Handling
+
+Unexpected things happen. If a request cannot be processed because of a failure, your service needs to tell via the response what happened and why.
+For this reason HTTP status codes exist and it is important to use the correct code in every exceptional situation.
+
+	400: Bad Request
+
+If path or query parameters are not valid (content or type) then use http.StatusBadRequest.
+
+	404: Not Found
+
+Despite a valid URI, the resource requested may not be available
+
+	500: Internal Server Error
+
+If the application logic could not process the request (or write the response) then use http.StatusInternalServerError.
+
+	405: Method Not Allowed
+
+The request has a valid URL but the method (GET,PUT,POST,...) is not allowed.
+
+	406: Not Acceptable
+
+The request does not have or has an unknown Accept Header set for this operation.
+
+	415: Unsupported Media Type
+
+The request does not have or has an unknown Content-Type Header set for this operation.
+
+ServiceError
+
+In addition to setting the correct (error) Http status code, you can choose to write a ServiceError message on the response.
+
 Serving files
 
 Use the Go standard http.ServeFile function to serve file system assets.
@@ -117,69 +145,17 @@ Use the Go standard http.ServeFile function to serve file system assets.
 
 See the example https://github.com/emicklei/go-restful/blob/master/examples/restful-serve-static.go with full implementations.
 
-Response Encoding
-
-Two encodings are supported: gzip and deflate. To enable this for all responses:
-
-	restful.EnableContentEncoding = true
-
-If a Http request includes the Accept-Encoding header then the response content will be compressed using the specified encoding.
-
-Alternatively, you can create a Filter that performs the encoding and install it per WebService or Route.
-See the example https://github.com/emicklei/go-restful/blob/master/examples/restful-encoding-filter.go
-
-
-Error Handling
-
-Unexpected things happen. If a request cannot be processed because of a failure, your service needs to tell the response what happened and why.
-For this reason HTTP status codes exist and it is important to use the correct code in every exceptional situation.
-
-400: Bad Request
-
-If path or query parameters are not valid (content or type) then use http.StatusBadRequest.
-
-	id, err := strconv.Atoi(req.PathParameter("id"))
-	if err != nil {
-		resp.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-404: Not Found
-
-Despite a valid URI, the resource requested may not be available
-
-	resp.WriteHeader(http.StatusNotFound)
-
-500: Internal Server Error
-
-If the application logic could not process the request (or write the response) then use http.StatusInternalServerError.
-
-	question, err := application.SharedLogic.GetQuestionById(id)
-	if err != nil {
-		log.Printf("GetQuestionById failed:", err)
-		resp.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-ServiceError
-
-In addition to setting the correct (error) Http status code, you can choose to write a ServiceError message on the response:
-
-	resp.WriteEntity(restful.NewError(http.StatusBadRequest, "Non-integer {id} path parameter"))
-
-	resp.WriteEntity(restful.NewError(http.StatusInternalServerError, err.Error()))
-
 
 
 Resources
 
 [project]: https://github.com/emicklei/go-restful
 
-[example]: https://github.com/emicklei/go-restful/blob/master/examples/restful-user-service.go
+[example]: https://github.com/emicklei/go-restful/blob/master/examples/restful-user-resource.go
 
 [design]:  http://ernestmicklei.com/2012/11/11/go-restful-api-design/
 
-[showcase]: https://github.com/emicklei/landskape
+[showcases]: https://github.com/emicklei/mora, https://github.com/emicklei/landskape
 
 (c) 2013, http://ernestmicklei.com. MIT License
 */
