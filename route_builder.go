@@ -1,5 +1,9 @@
 package restful
 
+// Copyright 2013 Ernest Micklei. All rights reserved.
+// Use of this source code is governed by a license
+// that can be found in the LICENSE file.
+
 import (
 	"log"
 	"reflect"
@@ -119,6 +123,9 @@ func (b *RouteBuilder) Build() Route {
 	pathExpr, err := newPathExpression(b.currentPath)
 	if err != nil {
 		log.Fatalf("[restful] Invalid path:%s because:%v", b.currentPath, err)
+	}
+	if b.function == nil {
+		log.Fatalf("[restful] No function specified for route:" + b.currentPath)
 	}
 	route := Route{
 		Method:        b.httpMethod,

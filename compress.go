@@ -1,6 +1,8 @@
-// Copyright (c) 2013 Ernest Micklei. All rights reserved.
-
 package restful
+
+// Copyright 2013 Ernest Micklei. All rights reserved.
+// Use of this source code is governed by a license
+// that can be found in the LICENSE file.
 
 import (
 	"compress/gzip"
@@ -11,8 +13,7 @@ import (
 	"strings"
 )
 
-// If EnableContentEncoding is true then the Accept-Encoding HTTP Header is inspected
-// and a CompressingResponseWriter is used to write the response.
+// OBSOLETE : use restful.DefaultContainer.EnableContentEncoding(true) to change this setting.
 var EnableContentEncoding = false
 
 // CompressingResponseWriter is a http.ResponseWriter that can perform content encoding (gzip and zlib)
@@ -43,10 +44,7 @@ func (c *CompressingResponseWriter) Close() {
 }
 
 // WantsCompressedResponse reads the Accept-Encoding header to see if and which encoding is requested.
-func WantsCompressedResponse(httpRequest *http.Request) (bool, string) {
-	if !EnableContentEncoding {
-		return false, ""
-	}
+func wantsCompressedResponse(httpRequest *http.Request) (bool, string) {
 	header := httpRequest.Header.Get(HEADER_AcceptEncoding)
 	gi := strings.Index(header, ENCODING_GZIP)
 	zi := strings.Index(header, ENCODING_DEFLATE)
