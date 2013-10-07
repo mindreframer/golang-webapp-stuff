@@ -13,3 +13,4 @@ https://github.com/astaxie/beedb.git
 https://github.com/hoisie/web.git
 https://github.com/vole/vole.git
 https://github.com/rcrowley/go-tigertonic.git
+https://github.com/stretchr/goweb.git
