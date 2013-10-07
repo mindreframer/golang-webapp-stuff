@@ -1,0 +1,3 @@
+[submodule "static/swagger-ui"]
+	path = static/swagger-ui
+	url = https://ovdp-deploy:AntOctovOy14@github.com/ku-ovdp/swagger-ui
