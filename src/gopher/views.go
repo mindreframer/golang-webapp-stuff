@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/jimmykuu/webhelpers"
+	"github.com/jimmykuu/wtforms"
 	"html/template"
 	"io"
 	"labix.org/v2/mgo"
@@ -109,9 +110,9 @@ func (u *Utils) UserInfo(username string) template.HTML {
 	c.Find(bson.M{"username": username}).One(&user)
 
 	format := `<div>
-      <a href="/member/%s"><img class="gravatar img-rounded" src="%s-middle" style="float:left;"></a>
-      <h3><a href="/member/%s">%s</a></h3>
-      <div class="clearfix"></div>
+        <a href="/member/%s"><img class="gravatar img-rounded" src="%s-middle" style="float:left;"></a>
+        <h3><a href="/member/%s">%s</a></h3>
+        <div class="clearfix"></div>
     </div>`
 
 	return template.HTML(fmt.Sprintf(format, username, user.AvatarImgSrc(), username, username))
@@ -124,6 +125,67 @@ func (u *Utils) Truncate(html template.HTML, length int) string {
 
 func (u *Utils) HTML(str string) template.HTML {
 	return template.HTML(str)
+}
+
+func (u *Utils) RenderInput(form wtforms.Form, fieldStr string, inputAttrs ...string) template.HTML {
+	field, err := form.Field(fieldStr)
+	if err != nil {
+		panic(err)
+	}
+
+	errorClass := ""
+
+	if field.HasErrors() {
+		errorClass = " has-error"
+	}
+
+	format := `<div class="form-group%s">
+        %s
+        %s
+        %s
+    </div>`
+
+	var inputAttrs2 []string = []string{`class="form-control"`}
+	inputAttrs2 = append(inputAttrs2, inputAttrs...)
+
+	return template.HTML(
+		fmt.Sprintf(format,
+			errorClass,
+			field.RenderLabel(),
+			field.RenderInput(inputAttrs2...),
+			field.RenderErrors()))
+}
+
+func (u *Utils) RenderInputH(form wtforms.Form, fieldStr string, labelWidth, inputWidth int, inputAttrs ...string) template.HTML {
+	field, err := form.Field(fieldStr)
+	if err != nil {
+		panic(err)
+	}
+
+	errorClass := ""
+
+	if field.HasErrors() {
+		errorClass = " has-error"
+	}
+	format := `<div class="form-group%s">
+        %s
+        <div class="col-lg-%d">
+            %s%s
+        </div>
+    </div>`
+	labelClass := fmt.Sprintf(`class="col-lg-%d control-label"`, labelWidth)
+
+	var inputAttrs2 []string = []string{`class="form-control"`}
+	inputAttrs2 = append(inputAttrs2, inputAttrs...)
+
+	return template.HTML(
+		fmt.Sprintf(format,
+			errorClass,
+			field.RenderLabel(labelClass),
+			inputWidth,
+			field.RenderInput(inputAttrs2...),
+			field.RenderErrors(),
+		))
 }
 
 func (u *Utils) HasAd(position string) bool {
@@ -320,6 +382,7 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, file string, data ma
 	data["utils"] = utils
 
 	data["analyticsCode"] = analyticsCode
+	data["shareCode"] = shareCode
 	data["staticFileVersion"] = Config.StaticFileVersion
 	flash, _ := store.Get(r, "flash")
 	data["flash"] = flash
@@ -494,12 +557,12 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fmt.Println(noSpaceKeywords, len(noSpaceKeywords))
-
-	conditions := []bson.M{bson.M{"content.type": TypeTopic}}
+	var titleConditions []bson.M
+	var markdownConditions []bson.M
 
 	for _, keyword := range noSpaceKeywords {
-		conditions = append(conditions, bson.M{"content.markdown": bson.M{"$regex": bson.RegEx{keyword, "i"}}})
+		titleConditions = append(titleConditions, bson.M{"content.title": bson.M{"$regex": bson.RegEx{keyword, "i"}}})
+		markdownConditions = append(markdownConditions, bson.M{"content.markdown": bson.M{"$regex": bson.RegEx{keyword, "i"}}})
 	}
 
 	c := DB.C("contents")
@@ -507,9 +570,16 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	var pagination *Pagination
 
 	if len(noSpaceKeywords) == 0 {
-		pagination = NewPagination(c.Find(bson.M{"content.type": TypeTopic}), "/search?"+q, PerPage)
+		pagination = NewPagination(c.Find(bson.M{"content.type": TypeTopic}).Sort("-latestrepliedat"), "/search?"+q, PerPage)
 	} else {
-		pagination = NewPagination(c.Find(bson.M{"$and": conditions}), "/search?q="+q, PerPage)
+		pagination = NewPagination(c.Find(bson.M{"$and": []bson.M{
+			bson.M{"content.type": TypeTopic},
+			bson.M{"$or": []bson.M{
+				bson.M{"$and": titleConditions},
+				bson.M{"$and": markdownConditions},
+			},
+			},
+		}}).Sort("-latestrepliedat"), "/search?q="+q, PerPage)
 	}
 
 	var topics []Topic

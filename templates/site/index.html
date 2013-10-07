@@ -1,14 +1,14 @@
 {{define "Title"}}Golang 酷站{{end}}
+{{define "ContentWidth"}}8{{end}}
 {{define "Breadcrumb"}}
 	<ul class="breadcrumb">
-		<li><a href="/"><i class="icon-home"></i> 首页</a> <span class="divider">/</span></li>
+		<li><a href="/"><i class="glyphicon glyphicon-home"></i> 首页</a></li>
 		<li class="active">酷站</li>
 	</ul>
 {{end}}
 {{define "Content"}}
 	<div class="content">
 		<h3><small>下面列出了基于Go语言开发的国内外网站或应用,以及和Go相关的网站,包括博客,开源项目等等.如发现不在此列的,请帮忙补充.</small></h3>
-		<a href="/site/new" class="btn btn-info">提交网站</a>
 	</div>
 	{{$username := .username}}
 	{{range .categories}}
@@ -21,11 +21,11 @@
 			<dl class="site">
 			{{range $sites}}
 				<dt id="site-{{.Id_.Hex}}">
-					<img src="http://www.google.com/s2/favicons?domain_url={{.Url}}"><a href="{{.Url}}" target="_blank">{{.Title}}</a>
+					<img src="https://plus.google.com/_/favicon?domain={{.Url}}"><a href="{{.Url}}" target="_blank">{{.Title}}</a>
 					{{if $username}}
 						{{if .CanEdit $username}}
-							<a href="/site/{{.Id_.Hex}}/edit" title="编辑"><i class="icon-pencil"></i></a>
-							<a href="/site/{{.Id_.Hex}}/delete" title="删除" onclick="javascript:return confirm('确定要删除吗？');"><i class="icon-remove"></i></a>
+							<a class="btn btn-xs btn-info pull-right" href="/site/{{.Id_.Hex}}/edit" title="编辑"><i class="glyphicon glyphicon-edit"></i></a>
+							<a class="btn btn-xs btn-danger pull-right" href="/site/{{.Id_.Hex}}/delete" title="删除" onclick="javascript:return confirm('确定要删除吗？');"><i class="glyphicon glyphicon-remove"></i></a>
 						{{end}}
 					{{end}}
 				</dt>
@@ -38,4 +38,13 @@
 {{end}}
 
 {{define "LeftSide"}}{{end}}
-{{define "RightSide"}}{{end}}
+{{define "RightSide"}}
+<div class="col-md-4 sidebar">
+	<a href="/site/new" class="btn btn-info btn-lg btn-block" style="margin-bottom: 20px;">提交网站</a>
+    {{if .utils.HasAd "4cols"}}
+    <div class="well sidebar-nav">
+        {{.utils.AdCode "4cols"}}
+    </div>
+    {{end}}
+</div>
+{{end}}
