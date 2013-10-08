@@ -1,0 +1,102 @@
+{{define "content"}}
+    <div class="page-header">
+        <h1>Mail Tracking Codes</h1>
+    </div>
+
+    {{if .Notice}}
+        <div class="alert-info alert">{{.Notice}}</div>
+    {{end}}
+
+    <div class="well">
+        <h2>Create New Code</h2>
+        <hr/>
+        <form action="/codes/create" method="POST">
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text"
+                       class="form-control"
+                       id="title" name="title"
+                       placeholder="Enter Title (So you can recall which mail it was for)"
+                       value="{{.Code.Title}}"
+                        />
+            </div>
+
+            <button type="submit" class="btn btn-default">Create Mail Tracker!</button>
+        </form>
+    </div>
+
+    <div class="h2">Existing Codes</div>
+    <hr/>
+    <ul class="media-list">
+        {{range .Codes}}
+            <li class="media well {{if .Read}}alert-success{{end}}">
+                <div class="media-body">
+                    <h4 class="media-heading">
+                        <i class="glyphicon {{if .Read}}glyphicon glyphicon-eye-open{{else}}glyphicon glyphicon-eye-close{{end}}">&nbsp;</i>
+                        {{.Title}}
+                        {{if .Started}}
+                            {{if .Read}}
+                                <small>
+                                    - This email has been opened by recipient on
+                                    <strong>{{.ReadAt}}</strong>
+                                </small>
+                            {{end}}
+                        {{end}}
+                    </h4>
+
+                    {{if .Started}}
+                        {{if .Read}}
+                            <hr/>
+                            <h5>
+                                Extra Headers
+                                <a href="javascript: ;" onclick="$('#headers_{{.Id}}').toggle()">Show</a>
+                            </h5>
+                            <table class="table" id="headers_{{.Id}}" style="display:none">
+                                {{range .Headers}}
+                                    <tr>
+                                        <td>{{.}}</td>
+                                    </tr>
+                                {{end}}
+                                <tr>
+                                    <td>
+                                        <a href="javascript: ;" onclick="$('#headers_{{.Id}}').toggle()">Hide</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        {{end}}
+                    {{else}}
+                        <div class="panel panel-info">
+                            <div class="panel-heading">
+                                You haven't started this tracking yet. Just embed this code in your email then click "Track now" button.
+                            </div>
+                            <img src="/images/gmail_img.png"/>
+
+                            <ul class="list-group">
+                                <li class="list-group-item">
+                                    <a href="/codes/start-tracking?id={{.Id}}" class="btn btn-primary">Start Tracking Now!</a>
+                                </li>
+                            </ul>
+                        </div>
+                    {{end}}
+
+                    <p class="text-muted">
+                        Insert the following link into your email as inline image:
+                        <textarea style="margin-top: 10px; margin-bottom: 10px; width: 100%">http://porchoni.appspot.com/codes/track?id={{.Id}}</textarea>
+                        <a class="btn btn-default"
+                           onclick="return confirm('Do you want to remove this code?')"
+                           href="/codes/destroy?id={{.Id}}">Delete</a>
+                    </p>
+                </div>
+            </li>
+        {{else}}
+            Hi there, looks like you don't have any code yet!. Go ahead and create your first code.
+            Then go to your gmail or other mail client and attach tracking url as image url.
+            <hr/>
+            <img src="/images/gmail_img.png"/>
+        {{end}}
+    </ul>
+
+
+{{end}}
+<div class="clearfix"></div>

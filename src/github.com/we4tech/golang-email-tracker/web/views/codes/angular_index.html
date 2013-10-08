@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html ng-app="EmailTracker">
+<head>
+    <title>Email Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link href="/stylesheets/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="/stylesheets/bootstrap-glyphicons.css" rel="stylesheet" media="screen">
+    <link href="/stylesheets/jumbotron-narrow.css" rel="stylesheet" media="screen">
+    <link href="/stylesheets/app.css" rel="stylesheet" media="screen">
+
+    <!-- Include javascript frameworks -->
+    <script src="/javascripts/jquery-1.10.2.min.js"></script>
+    <script src="/javascripts/bootstrap.min.js"></script>
+    <script src="/javascripts/angular.min.js"></script>
+    <script src="/javascripts/angular-resource.min.js"></script>
+    <script src="/javascripts/app.js"></script>
+    <script src="/javascripts/services.js"></script>
+</head>
+<body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-42951057-1', 'porchoni.appspot.com');
+  ga('send', 'pageview');
+
+
+</script>
+<div class="container-narrow">
+    <div class="header">
+        <ul class="nav nav-pills pull-right">
+            <li>
+                <a href="/">Home</a>
+            </li>
+            <li><a href="/codes">Codes</a></li>
+
+            <li>
+                <a href="/users/logout">Logout</a>
+            </li>
+        </ul>
+        <h3 class="text-muted">Email Tracker</h3>
+    </div>
+
+    <div ng-controller="CodesCtrl">
+        <div class="page-header">
+            <h1>Mail Tracking Codes</h1>
+        </div>
+
+        <div ng-show="notice != null" class="alert [[validationError && 'alert-error' || (savingError && 'alert-warning' || 'alert-info')]]">[[notice]]</div>
+
+        <div class="well">
+            <h2>Create New Code</h2>
+            <hr/>
+            <form name="codeForm" ng-submit="create()" novalidate>
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text"
+                           class="form-control"
+                           id="title" name="title" required
+                           placeholder="Enter Title (So you can recall which mail it was for)"
+                           ng-model="code.title" />
+                </div>
+
+                <button type="submit"
+                        ng-disabled="codeForm.$invalid"
+                        class="btn btn-default">Create Mail Tracker!</button>
+            </form>
+        </div>
+
+        <div class="h2">
+          Existing Codes
+          <small ng-show="codes.length > 0">[[codes.length]] items</small>
+        </div>
+        <hr/>
+        <ul class="media-list" >
+            <div ng-show="codes.length == 0">
+                Hi there, looks like you don't have any code yet!. Go ahead and create your first code.
+                Then go to your gmail or other mail client and attach tracking url as image url.
+                <hr/>
+                <img src="/images/gmail_img.png"/>
+            </div>
+        </ul>
+
+        <li class="media well [[code.Read && 'alert-success' || '']]" ng-repeat="code in codes">
+          <div class="media-body">
+            <h4 class="media-heading">
+              <i class="glyphicon [[code.Read && 'glyphicon glyphicon-eye-open' || 'glyphicon glyphicon-eye-close']]">
+                &nbsp;</i>
+              [[code.Title]]
+              <div ng-show="code.Started && code.Read">
+                <small>
+                  - This email has been opened by recipient on
+                  <strong>[[code.ReadAt]]</strong>
+                </small>
+              </div>
+            </h4>
+
+            <div ng-show="code.Started && code.Read">
+              <hr/>
+              <h5>
+                Extra Headers
+                <a href="javascript: ;" onclick="$('#headers_[[code.Id]]').toggle()">Show</a>
+              </h5>
+              <table class="table" id="headers_[[code.Id]]" style="display:none">
+                <tr ng-repeat="header in code.Headers">
+                  <td>[[header]]</td>
+                </tr>
+                <tr>
+                  <td>
+                    <a href="javascript: ;" onclick="$('#headers_[[code.Id]]').toggle()">Hide</a>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <div ng-show="!code.Started">
+              <div class="panel panel-info">
+                <div class="panel-heading">
+                  You haven't started this tracking yet. Just embed this code in your email then click
+                  "Track now" button.
+                </div>
+                <img src="/images/gmail_img.png"/>
+
+                <ul class="list-group">
+                  <li class="list-group-item">
+                    <a ng-click="track(code.Id)" class="btn btn-primary">Start
+                      Tracking Now!</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <p class="text-muted">
+              Insert the following link into your email as inline image:
+              <textarea style="margin-top: 10px; margin-bottom: 10px; width: 100%">http://porchoni.appspot.com/codes/track?id=[[code.Id]]</textarea>
+              <a class="btn btn-default"
+                 ng-click="destroy(code.Id)">Delete</a>
+            </p>
+          </div>
+        </li>
+    </div>
+    <div class="clearfix"></div>
+
+
+    <div class="footer">
+        <p>
+            2013 .
+            <a href="http://we4tech.wordpress.com">Blog</a>
+        </p>
+    </div>
+
+</div>
+<!-- /container -->
+
+<!-- Include custom javascripts -->
+
+</body>
+</html>

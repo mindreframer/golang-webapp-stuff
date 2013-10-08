@@ -1,0 +1,58 @@
+{{define "content"}}
+    {{if .Notice}}
+        <div class="alert alert-info">
+            {{.Notice}}
+        </div>
+    {{end}}
+
+    <div class="jumbotron">
+        <h1>Email Tracker!</h1>
+
+        <p class="lead">
+            Are you curious ? Whether your mail got read or left unread ?<br/>
+            Our system will let you know whenever your recipient open it!<br/>
+            Additionally get to know where he was from :)
+        </p>
+
+        <p><a class="btn btn-large btn-success" href="/users/signup">Sign up today</a></p>
+    </div>
+
+    <div class="row marketing">
+        <div class="col-lg-6">
+            <h4>1. Sign Up</h4>
+
+            <p>Sign up is completely free! you just owe us to own this free account.</p>
+
+            <h4>2. Create Tracking Code</h4>
+
+            <p>
+                Enter "CODES" page and create unlimited email tracking code.
+            </p>
+
+            <h4>3. Embed Tracking Code</h4>
+
+            <p>Embed tracking code in your email as an inline image attachment.</p>
+        </div>
+
+        <div class="col-lg-6">
+            <h4>5. Done!</h4>
+
+            <p>Now wait and see when it turns into GREEN! that's what all you need.</p>
+
+            <h4>6. Analyze Headers</h4>
+
+            <p>We capture as much headers as possible. Now your turn analyze them and decide.</p>
+
+            <h4>7. Fork and Contribute!</h4>
+
+            <p>
+                Fork us on
+                <a href="https://github.com/we4tech/golang-email-tracker">Github</a>
+            </p>
+        </div>
+
+        <div class="text-muted well" style="clear: both; text-align: center">
+            Special thanks to my wife "Shuchi" :) she brought up this idea!
+        </div>
+    </div>
+{{end}}
