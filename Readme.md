@@ -44,6 +44,10 @@
       A powerful URL router and dispatcher for golang.
        21 commits, last change: 2013-09-11 13:10:56, 325 stars, 66 forks
 
+    gosexy/db:
+      Expressive database wrappers for Go (golang). SQLite3, MySQL, PostgreSQL and MongoDB.
+       206 commits, last change: 2013-08-07 09:22:27, 125 stars, 14 forks
+
     hoisie/web:
       The easiest way to create web applications with Go
        272 commits, last change: 2013-06-30 12:54:56, 1,456 stars, 221 forks
