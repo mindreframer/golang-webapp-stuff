@@ -100,6 +100,10 @@
       Super Fast Regex in Go
        106 commits, last change: 2013-08-06 10:41:03, 47 stars, 3 forks
 
+    prometheus/client_golang:
+      A suite of instrumentation metric primitives for Go (golang) that can be exposed through a JSON web services interface.
+       117 commits, last change: 2013-09-16 03:56:13, 6 stars, 2 forks
+
     rcrowley/go-tigertonic:
       A Go framework for building JSON web services inspired by Dropwizard
        122 commits, last change: 2013-10-05 12:47:42, 114 stars, 8 forks
