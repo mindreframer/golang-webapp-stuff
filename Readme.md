@@ -84,6 +84,10 @@
       Rate limiting reverse proxy
        108 commits, last change: 2013-10-04 10:53:08, 44 stars, 2 forks
 
+    moovweb/gokogiri:
+      A light libxml wrapper for Go
+       547 commits, last change: 2013-08-28 10:54:29, 148 stars, 23 forks
+
     rcrowley/go-tigertonic:
       A Go framework for building JSON web services inspired by Dropwizard
        122 commits, last change: 2013-10-05 12:47:42, 114 stars, 8 forks
