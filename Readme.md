@@ -60,6 +60,10 @@
 
        204 commits, last change: , 0 stars, 0 forks
 
+    jmoiron/modl:
+      golang database modelling library
+       156 commits, last change: 2013-10-06 11:38:10, 22 stars, 0 forks
+
     jmoiron/monet:
       golang blog
        92 commits, last change: 2013-05-19 11:17:30, 70 stars, 10 forks
