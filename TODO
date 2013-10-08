@@ -1,0 +1,2 @@
+- Validate repository for Go code fluency and idiomatic adherence.
+- Evaluate using atomic types versus locks.
