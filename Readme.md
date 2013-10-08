@@ -16,6 +16,18 @@
 
        40 commits, last change: 2012-07-12 04:03:08, 443 stars, 42 forks
 
+    coocood/qbs:
+      QBS stands for Query By Struct. A Go ORM.
+       136 commits, last change: 2013-09-22 16:26:50, 183 stars, 35 forks
+
+    coopernurse/gorp:
+      ORM-ish library for Go
+       162 commits, last change: 2013-09-19 17:01:29, 400 stars, 77 forks
+
+    eaigner/hood:
+      Database agnostic ORM for Go
+       291 commits, last change: 2013-06-21 03:38:40, 370 stars, 44 forks
+
     emicklei/go-restful:
       library to build REST based Web Services using Google Go
        244 commits, last change: 2013-10-07 07:13:15, 270 stars, 36 forks
@@ -51,6 +63,10 @@
     jmoiron/monet:
       golang blog
        92 commits, last change: 2013-05-19 11:17:30, 70 stars, 10 forks
+
+    jmoiron/sqlx:
+      general purpose extensions to golang's database/sql
+       58 commits, last change: 2013-10-05 12:59:58, 70 stars, 10 forks
 
     kr/hk:
       Fast Heroku client
