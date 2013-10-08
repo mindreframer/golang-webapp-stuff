@@ -88,6 +88,10 @@
       A light libxml wrapper for Go
        547 commits, last change: 2013-08-28 10:54:29, 148 stars, 23 forks
 
+    moovweb/rubex:
+      Super Fast Regex in Go
+       106 commits, last change: 2013-08-06 10:41:03, 47 stars, 3 forks
+
     rcrowley/go-tigertonic:
       A Go framework for building JSON web services inspired by Dropwizard
        122 commits, last change: 2013-10-05 12:47:42, 114 stars, 8 forks
