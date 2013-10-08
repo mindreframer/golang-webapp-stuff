@@ -9,6 +9,7 @@ https://github.com/hoisie/web.git
 https://github.com/jimmykuu/gopher.git
 https://github.com/jingweno/progmob.git
 https://github.com/jmadan/go-msgstory.git
+https://github.com/jmoiron/monet.git
 https://github.com/kr/hk.git
 https://github.com/ku-ovdp/api.git
 https://github.com/mailgun/vulcan.git
@@ -19,4 +20,3 @@ https://github.com/StefanKjartansson/fyrirtaekjaskra.git
 https://github.com/stretchr/goweb.git
 https://github.com/tanema/mgorx.git
 https://github.com/vole/vole.git
-https://github.com/jmoiron/monet.git
