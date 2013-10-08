@@ -22,6 +22,7 @@ https://github.com/kentaro/delta.git
 https://github.com/kr/hk.git
 https://github.com/ku-ovdp/api.git
 https://github.com/mailgun/vulcan.git
+https://github.com/mattbaird/gochimp.git
 https://github.com/moovweb/gokogiri.git
 https://github.com/moovweb/rubex.git
 https://github.com/prometheus/client_golang.git
@@ -34,4 +35,3 @@ https://github.com/stretchr/goweb.git
 https://github.com/tanema/mgorx.git
 https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
-https://github.com/mattbaird/gochimp.git
