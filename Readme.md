@@ -143,4 +143,8 @@
     vole/vole:
       Vole is a social, peer-to-peer web app for sharing words, pictures and videos.
        262 commits, last change: 2013-07-08 11:23:30, 187 stars, 26 forks
+
+    we4tech/golang-email-tracker:
+      Google Go based email tracking web application, You can get to know when your recipient has opened your email.
+       8 commits, last change: 2013-08-06 03:55:07, 1 stars, 0 forks
 <!-- PROJECTS_LIST_END -->
