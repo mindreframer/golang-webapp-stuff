@@ -24,6 +24,10 @@
       MongoDB generic REST server in Go
        74 commits, last change: 2013-10-06 12:13:22, 15 stars, 2 forks
 
+    gorilla/mux:
+      A powerful URL router and dispatcher for golang.
+       21 commits, last change: 2013-09-11 13:10:56, 325 stars, 66 forks
+
     hoisie/web:
       The easiest way to create web applications with Go
        272 commits, last change: 2013-06-30 12:54:56, 1,456 stars, 221 forks
