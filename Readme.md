@@ -48,6 +48,10 @@
 
        204 commits, last change: , 0 stars, 0 forks
 
+    jmoiron/monet:
+      golang blog
+       92 commits, last change: 2013-05-19 11:17:30, 70 stars, 10 forks
+
     kr/hk:
       Fast Heroku client
        272 commits, last change: 2013-10-05 03:16:56, 82 stars, 3 forks
