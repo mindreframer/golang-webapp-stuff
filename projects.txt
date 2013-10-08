@@ -3,6 +3,7 @@ https://github.com/astaxie/beedb.git
 https://github.com/emicklei/go-restful.git
 https://github.com/emicklei/landskape.git
 https://github.com/emicklei/mora.git
+https://github.com/gorilla/mux.git
 https://github.com/hoisie/web.git
 https://github.com/jimmykuu/gopher.git
 https://github.com/jingweno/progmob.git
@@ -16,4 +17,3 @@ https://github.com/StefanKjartansson/fyrirtaekjaskra.git
 https://github.com/stretchr/goweb.git
 https://github.com/tanema/mgorx.git
 https://github.com/vole/vole.git
-https://github.com/gorilla/mux.git
