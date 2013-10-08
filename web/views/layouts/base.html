@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link href="/stylesheets/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="/stylesheets/bootstrap-glyphicons.css" rel="stylesheet" media="screen">
+    <link href="/stylesheets/jumbotron-narrow.css" rel="stylesheet" media="screen">
+
+    <!-- Include javascript frameworks -->
+    <script src="/javascripts/jquery-1.10.2.min.js"></script>
+    <script src="/javascripts/bootstrap.min.js"></script>
+</head>
+<body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-42951057-1', 'porchoni.appspot.com');
+  ga('send', 'pageview');
+
+</script>
+<div class="container-narrow">
+    <div class="header">
+        <ul class="nav nav-pills pull-right">
+            <li>
+                <a href="/">Home</a>
+            </li>
+            <li><a href="/codes">Codes</a></li>
+
+            {{if .LoggedIn}}
+                <li>
+                    <a href="/users/logout">Logout</a>
+                </li>
+            {{else}}
+                <li><a href="/users/signup">Sign in</a></li>
+            {{end}}
+        </ul>
+        <h3 class="text-muted">Email Tracker</h3>
+    </div>
+
+    {{template "content" .}}
+
+    <div class="footer">
+        <p>
+            2013 .
+            <a href="http://we4tech.wordpress.com">Blog</a>
+        </p>
+    </div>
+
+</div>
+<!-- /container -->
+
+<!-- Include custom javascripts -->
+
+</body>
+</html>
