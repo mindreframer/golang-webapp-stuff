@@ -112,6 +112,10 @@
       Super Fast Regex in Go
        106 commits, last change: 2013-08-06 10:41:03, 47 stars, 3 forks
 
+    pilu/traffic:
+      Sinatra inspired regexp/pattern mux and web framework for Go
+       73 commits, last change: 2013-10-06 21:58:33, 84 stars, 3 forks
+
     prometheus/client_golang:
       A suite of instrumentation metric primitives for Go (golang) that can be exposed through a JSON web services interface.
        117 commits, last change: 2013-09-16 03:56:13, 6 stars, 2 forks
