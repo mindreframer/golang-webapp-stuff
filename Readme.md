@@ -12,6 +12,10 @@
       beedb is a go ORM,support database/sql interface，pq/mysql/sqlite
        49 commits, last change: 2013-07-30 21:21:29, 316 stars, 75 forks
 
+    bmizerany/pat:
+
+       40 commits, last change: 2012-07-12 04:03:08, 443 stars, 42 forks
+
     emicklei/go-restful:
       library to build REST based Web Services using Google Go
        244 commits, last change: 2013-10-07 07:13:15, 270 stars, 36 forks
