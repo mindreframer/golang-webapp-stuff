@@ -112,6 +112,10 @@
       A high productivity web framework for the Go language, in the spirit of Rails and Play!.
        689 commits, last change: 2013-10-02 18:27:41, 2,322 stars, 337 forks
 
+    shaoshing/train:
+      Asset Management for web app using Golang.
+       143 commits, last change: 2013-10-05 12:15:51, 55 stars, 7 forks
+
     stathat/bingo:
       go http helper package. Includes contexts, logging, and some rendering helpers.
        16 commits, last change: , 30 stars, 3 forks
