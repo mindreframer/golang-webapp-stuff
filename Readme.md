@@ -76,6 +76,10 @@
       general purpose extensions to golang's database/sql
        58 commits, last change: 2013-10-05 12:59:58, 70 stars, 10 forks
 
+    kentaro/delta:
+
+       27 commits, last change: 2013-10-07 03:11:33, 38 stars, 4 forks
+
     kr/hk:
       Fast Heroku client
        272 commits, last change: 2013-10-05 03:16:56, 82 stars, 3 forks
