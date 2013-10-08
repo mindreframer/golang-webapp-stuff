@@ -100,6 +100,10 @@
       Rate limiting reverse proxy
        108 commits, last change: 2013-10-04 10:53:08, 44 stars, 2 forks
 
+    mattbaird/gochimp:
+      Golang based client API for Mailchimp, including Mandrill
+       32 commits, last change: 2013-09-09 20:18:57, 8 stars, 6 forks
+
     moovweb/gokogiri:
       A light libxml wrapper for Go
        547 commits, last change: 2013-08-28 10:54:29, 148 stars, 23 forks
