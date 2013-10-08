@@ -20,3 +20,7 @@ https://github.com/StefanKjartansson/fyrirtaekjaskra.git
 https://github.com/stretchr/goweb.git
 https://github.com/tanema/mgorx.git
 https://github.com/vole/vole.git
+https://github.com/coocood/qbs.git
+https://github.com/eaigner/hood.git
+https://github.com/coopernurse/gorp.git
+https://github.com/jmoiron/sqlx.git
