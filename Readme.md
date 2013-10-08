@@ -56,6 +56,10 @@
       A high productivity web framework for the Go language, in the spirit of Rails and Play!.
        689 commits, last change: 2013-10-02 18:27:41, 2,322 stars, 337 forks
 
+    stathat/bingo:
+      go http helper package. Includes contexts, logging, and some rendering helpers.
+       16 commits, last change: , 30 stars, 3 forks
+
     StefanKjartansson/fyrirtaekjaskra:
       Scraper for the Icelandic company registry
        12 commits, last change: , 1 stars, 0 forks
