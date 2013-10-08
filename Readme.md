@@ -60,6 +60,10 @@
 
        204 commits, last change: , 0 stars, 0 forks
 
+    jmoiron/jsonq:
+      simple json field access for golang
+       12 commits, last change: 2013-09-04 11:30:07, 78 stars, 3 forks
+
     jmoiron/modl:
       golang database modelling library
        156 commits, last change: 2013-10-06 11:38:10, 22 stars, 0 forks
