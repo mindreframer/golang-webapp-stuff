@@ -48,6 +48,10 @@
 
        204 commits, last change: , 0 stars, 0 forks
 
+    kr/hk:
+      Fast Heroku client
+       272 commits, last change: 2013-10-05 03:16:56, 82 stars, 3 forks
+
     ku-ovdp/api:
       Open Voice Data Project API
        67 commits, last change: , 0 stars, 0 forks
