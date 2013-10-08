@@ -64,6 +64,10 @@
 
        204 commits, last change: , 0 stars, 0 forks
 
+    jmcvetta/napping:
+      Golang client library for interacting with RESTful APIs.
+       131 commits, last change: 2013-09-27 15:42:32, 11 stars, 8 forks
+
     jmoiron/jsonq:
       simple json field access for golang
        12 commits, last change: 2013-09-04 11:30:07, 78 stars, 3 forks
