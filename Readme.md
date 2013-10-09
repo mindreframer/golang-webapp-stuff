@@ -148,6 +148,10 @@
       A mgo revel extention
        14 commits, last change: , 0 stars, 0 forks
 
+    ugorji/go:
+      Open-Source Go Code. msgpack.org[Go]
+       34 commits, last change: 2013-10-05 21:50:20, 68 stars, 8 forks
+
     vole/vole:
       Vole is a social, peer-to-peer web app for sharing words, pictures and videos.
        262 commits, last change: 2013-07-08 11:23:30, 187 stars, 26 forks
