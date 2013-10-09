@@ -34,6 +34,6 @@ https://github.com/stathat/bingo.git
 https://github.com/StefanKjartansson/fyrirtaekjaskra.git
 https://github.com/stretchr/goweb.git
 https://github.com/tanema/mgorx.git
+https://github.com/ugorji/go.git
 https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
-https://github.com/ugorji/go.git
