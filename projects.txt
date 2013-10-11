@@ -7,6 +7,7 @@ https://github.com/eaigner/hood.git
 https://github.com/emicklei/go-restful.git
 https://github.com/emicklei/landskape.git
 https://github.com/emicklei/mora.git
+https://github.com/google/go-github.git
 https://github.com/gorilla/mux.git
 https://github.com/gosexy/db.git
 https://github.com/hoisie/web.git
@@ -25,6 +26,7 @@ https://github.com/mailgun/vulcan.git
 https://github.com/mattbaird/gochimp.git
 https://github.com/moovweb/gokogiri.git
 https://github.com/moovweb/rubex.git
+https://github.com/mssola/user_agent.git
 https://github.com/pilu/traffic.git
 https://github.com/prometheus/client_golang.git
 https://github.com/rcrowley/go-tigertonic.git
@@ -37,5 +39,3 @@ https://github.com/tanema/mgorx.git
 https://github.com/ugorji/go.git
 https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
-https://github.com/mssola/user_agent.git
-https://github.com/google/go-github.git
