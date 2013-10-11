@@ -40,6 +40,10 @@
       MongoDB generic REST server in Go
        74 commits, last change: 2013-10-06 12:13:22, 15 stars, 2 forks
 
+    google/go-github:
+      Go library for accessing the GitHub API
+       151 commits, last change: 2013-09-24 14:13:01, 237 stars, 50 forks
+
     gorilla/mux:
       A powerful URL router and dispatcher for golang.
        21 commits, last change: 2013-09-11 13:10:56, 325 stars, 66 forks
@@ -111,6 +115,10 @@
     moovweb/rubex:
       Super Fast Regex in Go
        106 commits, last change: 2013-08-06 10:41:03, 47 stars, 3 forks
+
+    mssola/user_agent:
+      HTTP User Agent parser for the Go programming language.
+       39 commits, last change: 2013-09-24 08:26:12, 28 stars, 3 forks
 
     pilu/traffic:
       Sinatra inspired regexp/pattern mux and web framework for Go
