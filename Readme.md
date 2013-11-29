@@ -22,6 +22,10 @@
 
        40 commits, last change: 2012-07-12 04:03:08, 443 stars, 42 forks
 
+    codegangsta/martini:
+      Classy web framework for Go
+       189 commits, last change: 2013-11-29 09:33:22, 2,081 stars, 132 forks
+
     coocood/qbs:
       QBS stands for Query By Struct. A Go ORM.
        136 commits, last change: 2013-09-22 16:26:50, 183 stars, 35 forks
