@@ -29,6 +29,7 @@ https://github.com/moovweb/rubex.git
 https://github.com/mssola/user_agent.git
 https://github.com/pilu/traffic.git
 https://github.com/prometheus/client_golang.git
+https://github.com/PuerkitoBio/martini-api-example.git
 https://github.com/rcrowley/go-tigertonic.git
 https://github.com/robfig/revel.git
 https://github.com/shaoshing/train.git
@@ -39,4 +40,3 @@ https://github.com/tanema/mgorx.git
 https://github.com/ugorji/go.git
 https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
-https://github.com/PuerkitoBio/martini-api-example.git
