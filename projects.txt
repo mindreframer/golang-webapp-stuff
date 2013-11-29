@@ -1,6 +1,7 @@
 https://github.com/alouca/MongoQueue.git
 https://github.com/astaxie/beedb.git
 https://github.com/bmizerany/pat.git
+https://github.com/codegangsta/martini.git
 https://github.com/coocood/qbs.git
 https://github.com/coopernurse/gorp.git
 https://github.com/eaigner/hood.git
@@ -40,4 +41,3 @@ https://github.com/tanema/mgorx.git
 https://github.com/ugorji/go.git
 https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
-https://github.com/codegangsta/martini.git
