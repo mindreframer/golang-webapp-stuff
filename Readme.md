@@ -22,6 +22,10 @@
 
        40 commits, last change: 2012-07-12 04:03:08, 443 stars, 42 forks
 
+    codegangsta/martini-contrib:
+      Contributed Martini Handlers and Utilities
+       184 commits, last change: 2013-11-28 08:22:10, 90 stars, 10 forks
+
     codegangsta/martini:
       Classy web framework for Go
        189 commits, last change: 2013-11-29 09:33:22, 2,081 stars, 132 forks
