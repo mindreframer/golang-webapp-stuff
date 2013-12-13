@@ -3,10 +3,12 @@ package user
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	_ "github.com/go-sql-driver/mysql"
 	Connection "github.com/jmadan/go-msgstory/connection"
-	Message "github.com/jmadan/go-msgstory/message"
+	// Message "github.com/jmadan/go-msgstory/message"
+	"crypto/sha256"
+	"encoding/hex"
 	RD "github.com/jmadan/go-msgstory/util"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -23,12 +25,21 @@ type User struct {
 	Email       string        `json:"email" bson:"email"`
 	Handle      string        `json:"handle" bson:"handle"`
 	PhoneNumber string        `json:"phone" bson:"phone"`
-	Relations   rels          `json:"relations" bson:"relations"`
-	Created_on  time.Time     `json:"created_on" bson:"created_on"`
+	CreatedOn   time.Time     `json:"created_on" bson:"created_on"`
+	// Relations   rels          `json:"relations" bson:"relations"`
 }
 
-type rels struct {
-	Messages []Message.Message `json:"messages" bson:"messages"`
+// type rels struct {
+// 	Messages []Message.Message `json:"messages" bson:"messages"`
+// }
+
+func (U *User) UserToJSON() string {
+	userJSON, err := json.Marshal(&U)
+	if err != nil {
+		log.Fatal(err.Error())
+		userJSON = []byte("Error")
+	}
+	return string(userJSON)
 }
 
 func (u *User) SetEmail(email string) {
@@ -51,13 +62,13 @@ func (u *User) GetHandle() string {
 	return u.Handle
 }
 
-func (u *User) GetMessages() string {
-	str, err := json.Marshal(u.Relations.Messages)
-	if err != nil {
-		fmt.Println("what the fuck!")
-	}
-	return string(str)
-}
+// func (u *User) GetMessages() string {
+// 	str, err := json.Marshal(u.Relations.Messages)
+// 	if err != nil {
+// 		fmt.Println("what the fuck!")
+// 	}
+// 	return string(str)
+// }
 
 func (u *User) GetUser() string {
 	dbSession := Connection.GetDBSession()
@@ -126,7 +137,7 @@ func (u *User) CreateUser() RD.ReturnData {
 	c := dbSession.DB(dataBase[3]).C("jove")
 
 	u.Id = bson.NewObjectId()
-	u.Created_on = time.Now()
+	u.CreatedOn = time.Now()
 
 	err := c.Insert(u)
 	if err != nil {
@@ -152,6 +163,9 @@ func CreateUserLogin(useremail, password string) string {
 	}
 	defer db.Close()
 
+	hasher := sha256.New()
+	hasher.Write([]byte(password))
+
 	stmtIns, err := db.Prepare("INSERT INTO USERS (USEREMAIL,PASSWORD) VALUES (?,?)")
 	if err != nil {
 		log.Fatal("stmtError :" + err.Error())
@@ -159,7 +173,7 @@ func CreateUserLogin(useremail, password string) string {
 	defer stmtIns.Close()
 
 	// err = stmtOut.QueryRow(useremail, userpassword).Scan(&authorize.user_id, &authorize.email)
-	_, err = stmtIns.Exec(useremail, password)
+	_, err = stmtIns.Exec(useremail, hex.EncodeToString(hasher.Sum(nil)))
 	if err != nil {
 		log.Print("stmtExecution: " + err.Error())
 	}
@@ -205,4 +219,15 @@ func GetUserByEmail(user_email string) string {
 	}
 
 	return uid
+}
+
+func GetUserById(user_id string) (string, error) {
+	dbSession := Connection.GetDBSession()
+	dbSession.SetMode(mgo.Monotonic, true)
+	dataBase := strings.SplitAfter(os.Getenv("MONGOHQ_URL"), "/")
+	c := dbSession.DB(dataBase[3]).C("jove")
+
+	result := User{}
+	err := c.Find(bson.M{"_id": bson.ObjectIdHex(user_id)}).One(&result)
+	return result.UserToJSON(), err
 }

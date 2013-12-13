@@ -1,11 +1,21 @@
 package user
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	// "labix.org/v2/mgo/bson"
+	"fmt"
 	"testing"
-	// "time"
+	"time"
 )
+
+var user = User{
+	UserId:      11,
+	Name:        "Jasdeep",
+	Email:       "jasdeepm@gmail.com",
+	Handle:      "JD",
+	PhoneNumber: "",
+	CreatedOn:   time.Now(),
+}
 
 func Test_CreatePerson(t *testing.T) {
 	user := User{}
@@ -21,14 +31,14 @@ func Test_CreatePerson(t *testing.T) {
 	}
 }
 
-// func Test_GetByHandle(t *testing.T) {
-// 	res := GetByHandle("jasdeepm@gmail.com")
-// 	if res.Name == "JD" {
-// 		t.Log("PASSED")
-// 	} else {
-// 		t.Fail()
-// 	}
-// }
+func Test_GetByHandle(t *testing.T) {
+	res := GetByHandle("jasdeepm@gmail.com")
+	if res.Name == "JD" {
+		t.Log("PASSED")
+	} else {
+		t.Fail()
+	}
+}
 
 func Test_GetUser(t *testing.T) {
 	// person := User{0, 1, "Jasdeep", "jasdeepm@gmail.com", "JD", "07818912893", rels{}, time.Now()}
@@ -51,16 +61,35 @@ func Test_GetUser(t *testing.T) {
 	}
 }
 
-// func Test_CreateUserLogin(t *testing.T) {
-// 	useremail := "test@test.com"
-// 	password := "password"
-// 	user_id := CreateUserLogin(useremail, password)
-// 	uid := getUserByEmail(useremail)
+func Test_CreateUserLogin(t *testing.T) {
+	useremail := "test@test.com"
+	password := "password"
+	user_id := CreateUserLogin(useremail, password)
+	uid := getUserByEmail(useremail)
 
-// 	if uid == user_id {
-// 		t.Log("Test_CreateUserLogn PASSED")
-// 	} else {
-// 		t.Fail()
-// 		t.Log("Test_CreateUserLogn FAILED")
-// 	}
-// }
+	if uid == user_id {
+		t.Log("Test_CreateUserLogn PASSED")
+	} else {
+		t.Fail()
+		t.Log("Test_CreateUserLogn FAILED")
+	}
+}
+
+func Test_UserJSON(t *testing.T) {
+	var str = user.UserToJSON()
+	if str != "Error" {
+		t.Log("Test_UserJSON PASSED")
+	} else {
+		t.Fail()
+	}
+}
+
+func Test_GetUserById(t *testing.T) {
+	res, err := GetUserById("51b8e5b62ffc2c5db5e9b213")
+	if err != nil {
+		t.Fail()
+	} else {
+		fmt.Println(res)
+		t.Log("PASSED")
+	}
+}
