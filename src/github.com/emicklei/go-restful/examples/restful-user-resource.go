@@ -47,17 +47,15 @@ func (u UserResource) Register(container *restful.Container) {
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
 		Writes(User{})) // on the response
 
-	ws.Route(ws.POST("").To(u.updateUser).
+	ws.Route(ws.PUT("").To(u.updateUser).
 		// docs
 		Doc("update a user").
-		Param(ws.BodyParameter("User", "representation of a user").DataType("main.User")).
 		Reads(User{})) // from the request
 
 	ws.Route(ws.PUT("/{user-id}").To(u.createUser).
 		// docs
 		Doc("create a user").
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("string")).
-		Param(ws.BodyParameter("User", "representation of a user").DataType("main.User")).
 		Reads(User{})) // from the request
 
 	ws.Route(ws.DELETE("/{user-id}").To(u.removeUser).
@@ -81,7 +79,7 @@ func (u UserResource) findUser(request *restful.Request, response *restful.Respo
 	}
 }
 
-// POST http://localhost:8080/users
+// PUT http://localhost:8080/users/1
 // <User><Id>1</Id><Name>Melissa Raspberry</Name></User>
 //
 func (u *UserResource) updateUser(request *restful.Request, response *restful.Response) {

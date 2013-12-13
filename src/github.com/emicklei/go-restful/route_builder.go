@@ -45,7 +45,7 @@ func (b *RouteBuilder) Produces(mimeTypes ...string) *RouteBuilder {
 	return b
 }
 
-// Specify what MIME types can be consumes ; the Accept Http header must matched any of these
+// Consumes specifies what MIME types can be consumes ; the Accept Http header must matched any of these
 func (b *RouteBuilder) Consumes(mimeTypes ...string) *RouteBuilder {
 	b.consumes = mimeTypes
 	return b
@@ -64,11 +64,13 @@ func (b *RouteBuilder) Doc(documentation string) *RouteBuilder {
 }
 
 // Reads tells what resource type will be read from the request payload. Optional.
+// A parameter of type "body" is added ,required is set to true and the dataType is set to the qualified name of the sample's type.
 func (b *RouteBuilder) Reads(sample interface{}) *RouteBuilder {
 	b.readSample = sample
-	typeAsName := reflect.TypeOf(sample).Name()
+	typeAsName := reflect.TypeOf(sample).String()
 	bodyParameter := &Parameter{&ParameterData{Name: typeAsName}}
 	bodyParameter.beBody()
+	bodyParameter.Required(true)
 	bodyParameter.DataType(typeAsName)
 	b.Param(bodyParameter)
 	return b

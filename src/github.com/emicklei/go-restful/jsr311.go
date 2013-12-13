@@ -4,41 +4,41 @@ package restful
 // Use of this source code is governed by a license
 // that can be found in the LICENSE file.
 
-// This file implements the flow for matching Requests to Routes (and consequently Resource Functions)
-// as specified by the JSR311 http://jsr311.java.net/nonav/releases/1.1/spec/spec.html.
-// Concept of locators is not implemented.
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"sort"
-	//"strconv"
-	"fmt"
-	//"github.com/emicklei/hopwatch"
 )
 
+// RouterJSR311 implements the flow for matching Requests to Routes (and consequently Resource Functions)
+// as specified by the JSR311 http://jsr311.java.net/nonav/releases/1.1/spec/spec.html.
+// RouterJSR311 implements the Router interface.
+// Concept of locators is not implemented.
 type RouterJSR311 struct{}
 
+// SelectRoute is part of the Router interface and returns the best match
+// for the WebService and its Route for the given Request.
 func (r RouterJSR311) SelectRoute(
 	webServices []*WebService,
-	httpWriter http.ResponseWriter,
-	httpRequest *http.Request) (selectedService *WebService, selectedRoute *Route, ok bool) {
+	httpRequest *http.Request) (selectedService *WebService, selectedRoute *Route, err error) {
 
 	// Identify the root resource class (WebService)
 	dispatcher, finalMatch, err := r.detectDispatcher(httpRequest.URL.Path, webServices)
 	if err != nil {
-		httpWriter.WriteHeader(http.StatusNotFound)
-		return nil, nil, false
+		// httpWriter.WriteHeader(http.StatusNotFound)
+		return nil, nil, NewError(http.StatusNotFound, "")
 	}
 	// Obtain the set of candidate methods (Routes)
 	routes := r.selectRoutes(dispatcher, finalMatch)
 
 	// Identify the method (Route) that will handle the request
-	route, ok := r.detectRoute(routes, httpWriter, httpRequest)
+	route, ok := r.detectRoute(routes, httpRequest)
 	return dispatcher, route, ok
 }
 
 // http://jsr311.java.net/nonav/releases/1.1/spec/spec3.html#x3-360003.7.2
-func (r RouterJSR311) detectRoute(routes []Route, httpWriter http.ResponseWriter, httpRequest *http.Request) (*Route, bool) {
+func (r RouterJSR311) detectRoute(routes []Route, httpRequest *http.Request) (*Route, error) {
 	// http method
 	methodOk := []Route{}
 	for _, each := range routes {
@@ -47,9 +47,7 @@ func (r RouterJSR311) detectRoute(routes []Route, httpWriter http.ResponseWriter
 		}
 	}
 	if len(methodOk) == 0 {
-		httpWriter.WriteHeader(http.StatusMethodNotAllowed)
-		httpWriter.Write([]byte("405: Method Not Allowed"))
-		return nil, false
+		return nil, NewError(http.StatusMethodNotAllowed, "405: Method Not Allowed")
 	}
 	inputMediaOk := methodOk
 	// content-type
@@ -62,9 +60,7 @@ func (r RouterJSR311) detectRoute(routes []Route, httpWriter http.ResponseWriter
 			}
 		}
 		if len(inputMediaOk) == 0 {
-			httpWriter.WriteHeader(http.StatusUnsupportedMediaType)
-			httpWriter.Write([]byte("415: Unsupported Media Type"))
-			return nil, false
+			return nil, NewError(http.StatusUnsupportedMediaType, "415: Unsupported Media Type")
 		}
 	}
 	// accept
@@ -79,11 +75,9 @@ func (r RouterJSR311) detectRoute(routes []Route, httpWriter http.ResponseWriter
 		}
 	}
 	if len(outputMediaOk) == 0 {
-		httpWriter.WriteHeader(http.StatusNotAcceptable)
-		httpWriter.Write([]byte("406: Not Acceptable"))
-		return &Route{}, false
+		return nil, NewError(http.StatusNotAcceptable, "406: Not Acceptable")
 	}
-	return r.bestMatchByMedia(outputMediaOk, contentType, accept), true
+	return r.bestMatchByMedia(outputMediaOk, contentType, accept), nil
 }
 
 // http://jsr311.java.net/nonav/releases/1.1/spec/spec3.html#x3-360003.7.2
@@ -165,15 +159,15 @@ type sortableRouteCandidates struct {
 	candidates []routeCandidate
 }
 
-func (self *sortableRouteCandidates) Len() int {
-	return len(self.candidates)
+func (rcs *sortableRouteCandidates) Len() int {
+	return len(rcs.candidates)
 }
-func (self *sortableRouteCandidates) Swap(i, j int) {
-	self.candidates[i], self.candidates[j] = self.candidates[j], self.candidates[i]
+func (rcs *sortableRouteCandidates) Swap(i, j int) {
+	rcs.candidates[i], rcs.candidates[j] = rcs.candidates[j], rcs.candidates[i]
 }
-func (self *sortableRouteCandidates) Less(i, j int) bool {
-	ci := self.candidates[i]
-	cj := self.candidates[j]
+func (rcs *sortableRouteCandidates) Less(i, j int) bool {
+	ci := rcs.candidates[i]
+	cj := rcs.candidates[j]
 	// primary key
 	if ci.literalCount < cj.literalCount {
 		return true
@@ -212,15 +206,15 @@ type sortableDispatcherCandidates struct {
 	candidates []dispatcherCandidate
 }
 
-func (self *sortableDispatcherCandidates) Len() int {
-	return len(self.candidates)
+func (dc *sortableDispatcherCandidates) Len() int {
+	return len(dc.candidates)
 }
-func (self *sortableDispatcherCandidates) Swap(i, j int) {
-	self.candidates[i], self.candidates[j] = self.candidates[j], self.candidates[i]
+func (dc *sortableDispatcherCandidates) Swap(i, j int) {
+	dc.candidates[i], dc.candidates[j] = dc.candidates[j], dc.candidates[i]
 }
-func (self *sortableDispatcherCandidates) Less(i, j int) bool {
-	ci := self.candidates[i]
-	cj := self.candidates[j]
+func (dc *sortableDispatcherCandidates) Less(i, j int) bool {
+	ci := dc.candidates[i]
+	cj := dc.candidates[j]
 	// primary key
 	if ci.matchesCount < cj.matchesCount {
 		return true

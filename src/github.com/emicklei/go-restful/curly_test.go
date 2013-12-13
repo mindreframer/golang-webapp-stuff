@@ -2,10 +2,11 @@ package restful
 
 import (
 	"io"
+	"net/http"
 	"testing"
 )
 
-var request_paths = []struct {
+var requestPaths = []struct {
 	// url with path (1) is handled by service with root (2) and remainder has value final (3)
 	path, root string
 }{
@@ -37,7 +38,7 @@ func TestCurlyDetectWebService(t *testing.T) {
 	router := CurlyRouter{}
 
 	ok := true
-	for i, fixture := range request_paths {
+	for i, fixture := range requestPaths {
 		requestTokens := tokenizePath(fixture.path)
 		who := router.detectWebService(requestTokens, wss)
 		if who != nil && who.RootPath() != fixture.root {
@@ -132,7 +133,7 @@ func TestCurly_ISSUE_34(t *testing.T) {
 	ws1 := new(WebService).Path("/")
 	ws1.Route(ws1.GET("/{type}/{id}").To(curlyDummy))
 	ws1.Route(ws1.GET("/network/{id}").To(curlyDummy))
-	routes := CurlyRouter{}.selectRoutes(ws1, nil, tokenizePath("/network/12"))
+	routes := CurlyRouter{}.selectRoutes(ws1, tokenizePath("/network/12"))
 	if len(routes) != 2 {
 		t.Fatal("expected 2 routes")
 	}
@@ -146,12 +147,27 @@ func TestCurly_ISSUE_34_2(t *testing.T) {
 	ws1 := new(WebService).Path("/")
 	ws1.Route(ws1.GET("/network/{id}").To(curlyDummy))
 	ws1.Route(ws1.GET("/{type}/{id}").To(curlyDummy))
-	routes := CurlyRouter{}.selectRoutes(ws1, nil, tokenizePath("/network/12"))
+	routes := CurlyRouter{}.selectRoutes(ws1, tokenizePath("/network/12"))
 	if len(routes) != 2 {
 		t.Fatal("expected 2 routes")
 	}
 	if routes[0].Path != "/network/{id}" {
 		t.Error("first is", routes[0].Path)
+	}
+}
+
+// clear && go test -v -test.run TestCurly_JsonHtml ...restful
+func TestCurly_JsonHtml(t *testing.T) {
+	ws1 := new(WebService).Path("/")
+	ws1.Route(ws1.GET("/some.html").To(curlyDummy).Consumes("*/*").Produces("text/html"))
+	req, _ := http.NewRequest("GET", "/some.html", nil)
+	req.Header.Set("Accept", "application/json")
+	_, route, err := CurlyRouter{}.SelectRoute([]*WebService{ws1}, req)
+	if err == nil {
+		t.Error("error expected")
+	}
+	if route != nil {
+		t.Error("no route expected")
 	}
 }
 

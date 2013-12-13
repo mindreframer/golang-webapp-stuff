@@ -12,12 +12,12 @@ type ServiceError struct {
 	Message string
 }
 
-// Return a new ServiceError using the code and reason
+// NewError returns a ServiceError using the code and reason
 func NewError(code int, message string) ServiceError {
 	return ServiceError{Code: code, Message: message}
 }
 
-// Return a text representation of the service error
-func (self ServiceError) Error() string {
-	return fmt.Sprintf("[ServiceError:%v] %v", self.Code, self.Message)
+// Error returns a text representation of the service error
+func (s ServiceError) Error() string {
+	return fmt.Sprintf("[ServiceError:%v] %v", s.Code, s.Message)
 }
