@@ -17,11 +17,12 @@ func NewHandler(server *Server) *Handler {
 }
 
 func (handler *Handler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
-	backendNames := handler.server.onSelecBackendtHandler(req)
+	backendNames := handler.server.onSelectBackendHandler(req)
 	backendCount := len(backendNames)
 
 	masterResponseCh := make(chan *Response, 1)
 	responseCh := make(chan *Response, backendCount)
+	done := make(chan bool)
 
 	for i := range backendNames {
 		backend := handler.server.Backends[backendNames[i]]
@@ -37,13 +38,16 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, req *http.Request)
 			response := <-responseCh
 
 			requestCount = requestCount + 1
-			responses[response.Backend.Name] = response
+			if response != nil {
+				responses[response.Backend.Name] = response
+			}
 
-			if requestCount >= len(backendNames) {
+			if requestCount >= backendCount {
 				if handler.server.onBackendFinishedHandler != nil {
 					handler.server.onBackendFinishedHandler(responses)
 				}
 
+				done <- true
 				break
 			}
 		}
@@ -51,8 +55,18 @@ func (handler *Handler) ServeHTTP(writer http.ResponseWriter, req *http.Request)
 
 	// Wait for only master response in a blocking way
 	response := <-masterResponseCh
-	writer.WriteHeader(response.HttpResponse.StatusCode)
-	writer.Write(response.Data)
+	if response == nil {
+		http.Error(writer, "Internal Server Error", 500)
+	} else {
+		writer.WriteHeader(response.HttpResponse.StatusCode)
+
+		_, err := writer.Write(response.Data)
+		if err != nil {
+			log.Printf("HTTP Response Write Error: %s\n", err)
+		}
+	}
+
+	<-done
 }
 
 func (handler *Handler) dispatchProxyRequest(backend *Backend, req *http.Request, masterResponseCh chan *Response, responseCh chan *Response) {
@@ -63,14 +77,16 @@ func (handler *Handler) dispatchProxyRequest(backend *Backend, req *http.Request
 	res, err := client.Do(proxyRequest)
 	elapsed := time.Now().Sub(now)
 
-	if err != nil {
-		log.Println(err)
-	}
-
-	response, err := NewResponse(backend, res, elapsed)
+	var response *Response
 
 	if err != nil {
-		log.Println(err)
+		log.Printf("HTTP Request Error: %s\n", err)
+		response = nil
+	} else {
+		response, err = NewResponse(backend, res, elapsed)
+		if err != nil {
+			log.Printf("HTTP Response Read Error: %s\n", err)
+		}
 	}
 
 	responseCh <- response
