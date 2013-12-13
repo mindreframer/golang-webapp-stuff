@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	http_test "github.com/stretchr/testify/http"
 	"github.com/stretchr/testify/mock"
+	"log"
 	"net/http"
 	"testing"
 )
@@ -328,36 +329,109 @@ func TestMapController(t *testing.T) {
 	assert.Equal(t, 10, len(h.HandlersPipe()))
 
 	// create
-	assertPathMatchHandler(t, h.HandlersPipe()[0].(*PathMatchHandler), "/test", "POST", "create")
+	assertPathMatchHandler(t, h.HandlersPipe()[0].(*PathMatchHandler), "/test", goweb_http.MethodPost, "create")
 
 	// read one
-	assertPathMatchHandler(t, h.HandlersPipe()[1].(*PathMatchHandler), "/test/123", "GET", "read one")
+	assertPathMatchHandler(t, h.HandlersPipe()[1].(*PathMatchHandler), "/test/123", goweb_http.MethodGet, "read one")
 
 	// read many
-	assertPathMatchHandler(t, h.HandlersPipe()[2].(*PathMatchHandler), "/test", "GET", "read many")
+	assertPathMatchHandler(t, h.HandlersPipe()[2].(*PathMatchHandler), "/test", goweb_http.MethodGet, "read many")
 
 	// delete one
-	assertPathMatchHandler(t, h.HandlersPipe()[3].(*PathMatchHandler), "/test/123", "DELETE", "delete one")
+	assertPathMatchHandler(t, h.HandlersPipe()[3].(*PathMatchHandler), "/test/123", goweb_http.MethodDelete, "delete one")
 
 	// delete many
-	assertPathMatchHandler(t, h.HandlersPipe()[4].(*PathMatchHandler), "/test", "DELETE", "delete many")
+	assertPathMatchHandler(t, h.HandlersPipe()[4].(*PathMatchHandler), "/test", goweb_http.MethodDelete, "delete many")
 
 	// update one
-	assertPathMatchHandler(t, h.HandlersPipe()[5].(*PathMatchHandler), "/test/123", "PUT", "update one")
+	assertPathMatchHandler(t, h.HandlersPipe()[5].(*PathMatchHandler), "/test/123", goweb_http.MethodPatch, "update one")
 
 	// update many
-	assertPathMatchHandler(t, h.HandlersPipe()[6].(*PathMatchHandler), "/test", "PUT", "update many")
+	assertPathMatchHandler(t, h.HandlersPipe()[6].(*PathMatchHandler), "/test", goweb_http.MethodPatch, "update many")
 
 	// replace one
-	assertPathMatchHandler(t, h.HandlersPipe()[7].(*PathMatchHandler), "/test/123", "POST", "replace")
+	assertPathMatchHandler(t, h.HandlersPipe()[7].(*PathMatchHandler), "/test/123", goweb_http.MethodPut, "replace")
 
 	// head
-	assertPathMatchHandler(t, h.HandlersPipe()[8].(*PathMatchHandler), "/test/123", "HEAD", "head")
-	assertPathMatchHandler(t, h.HandlersPipe()[8].(*PathMatchHandler), "/test", "HEAD", "head")
+	assertPathMatchHandler(t, h.HandlersPipe()[8].(*PathMatchHandler), "/test/123", goweb_http.MethodHead, goweb_http.MethodHead)
+	assertPathMatchHandler(t, h.HandlersPipe()[8].(*PathMatchHandler), "/test", goweb_http.MethodHead, goweb_http.MethodHead)
 
 	// options
-	assertPathMatchHandler(t, h.HandlersPipe()[9].(*PathMatchHandler), "/test/123", "OPTIONS", "options")
-	assertPathMatchHandler(t, h.HandlersPipe()[9].(*PathMatchHandler), "/test", "OPTIONS", "options")
+	assertPathMatchHandler(t, h.HandlersPipe()[9].(*PathMatchHandler), "/test/123", goweb_http.MethodOptions, goweb_http.MethodOptions)
+	assertPathMatchHandler(t, h.HandlersPipe()[9].(*PathMatchHandler), "/test", goweb_http.MethodOptions, goweb_http.MethodOptions)
+
+}
+
+func TestNewHttpHandler_SetsDefaultMethod(t *testing.T) {
+
+	h := NewHttpHandler(nil)
+
+	assert.Equal(t, h.HttpMethodForCreate, goweb_http.MethodPost)
+	assert.Equal(t, h.HttpMethodForReadOne, goweb_http.MethodGet)
+	assert.Equal(t, h.HttpMethodForReadMany, goweb_http.MethodGet)
+	assert.Equal(t, h.HttpMethodForDeleteOne, goweb_http.MethodDelete)
+	assert.Equal(t, h.HttpMethodForDeleteMany, goweb_http.MethodDelete)
+	assert.Equal(t, h.HttpMethodForUpdateOne, goweb_http.MethodPatch)
+	assert.Equal(t, h.HttpMethodForUpdateMany, goweb_http.MethodPatch)
+	assert.Equal(t, h.HttpMethodForReplace, goweb_http.MethodPut)
+	assert.Equal(t, h.HttpMethodForHead, goweb_http.MethodHead)
+	assert.Equal(t, h.HttpMethodForOptions, goweb_http.MethodOptions)
+
+}
+
+func TestMapController_WithExplicitHTTPMethods(t *testing.T) {
+
+	rest := new(controllers_test.TestController)
+
+	codecService := codecsservices.NewWebCodecService()
+	h := NewHttpHandler(codecService)
+
+	h.HttpMethodForCreate = "CREATE"
+	h.HttpMethodForReadOne = "READ_ONE"
+	h.HttpMethodForReadMany = "READ_MANY"
+	h.HttpMethodForDeleteOne = "DELETE_ONE"
+	h.HttpMethodForDeleteMany = "DELETE_MANY"
+	h.HttpMethodForUpdateOne = "UPDATE_ONE"
+	h.HttpMethodForUpdateMany = "UPDATE_MANY"
+	h.HttpMethodForReplace = "REPLACE"
+	h.HttpMethodForHead = "HEAD_CUSTOM"
+	h.HttpMethodForOptions = "OPTIONS_CUSTOM"
+
+	h.MapController(rest)
+
+	assert.Equal(t, 10, len(h.HandlersPipe()))
+
+	// create
+	assertPathMatchHandler(t, h.HandlersPipe()[0].(*PathMatchHandler), "/test", "CREATE", "create")
+
+	// read one
+	assertPathMatchHandler(t, h.HandlersPipe()[1].(*PathMatchHandler), "/test/123", "READ_ONE", "read one")
+
+	// read many
+	assertPathMatchHandler(t, h.HandlersPipe()[2].(*PathMatchHandler), "/test", "READ_MANY", "read many")
+
+	// delete one
+	assertPathMatchHandler(t, h.HandlersPipe()[3].(*PathMatchHandler), "/test/123", "DELETE_ONE", "delete one")
+
+	// delete many
+	assertPathMatchHandler(t, h.HandlersPipe()[4].(*PathMatchHandler), "/test", "DELETE_MANY", "delete many")
+
+	// update one
+	assertPathMatchHandler(t, h.HandlersPipe()[5].(*PathMatchHandler), "/test/123", "UPDATE_ONE", "update one")
+
+	// update many
+	assertPathMatchHandler(t, h.HandlersPipe()[6].(*PathMatchHandler), "/test", "UPDATE_MANY", "update many")
+
+	// replace one
+	assertPathMatchHandler(t, h.HandlersPipe()[7].(*PathMatchHandler), "/test/123", "REPLACE", "replace")
+
+	// head
+	assertPathMatchHandler(t, h.HandlersPipe()[8].(*PathMatchHandler), "/test/123", "HEAD_CUSTOM", "head")
+	assertPathMatchHandler(t, h.HandlersPipe()[8].(*PathMatchHandler), "/test", "HEAD_CUSTOM", "head")
+
+	// options
+	assertPathMatchHandler(t, h.HandlersPipe()[9].(*PathMatchHandler), "/test/123", "OPTIONS_CUSTOM", "options")
+	assertPathMatchHandler(t, h.HandlersPipe()[9].(*PathMatchHandler), "/test", "OPTIONS_CUSTOM", "options")
 
 }
 
@@ -411,13 +485,13 @@ func TestMapController_WithSpecificPath(t *testing.T) {
 	assertPathMatchHandler(t, h.HandlersPipe()[4].(*PathMatchHandler), "/something", "DELETE", "delete many")
 
 	// update one
-	assertPathMatchHandler(t, h.HandlersPipe()[5].(*PathMatchHandler), "/something/123", "PUT", "update one")
+	assertPathMatchHandler(t, h.HandlersPipe()[5].(*PathMatchHandler), "/something/123", "PATCH", "update one")
 
 	// update many
-	assertPathMatchHandler(t, h.HandlersPipe()[6].(*PathMatchHandler), "/something", "PUT", "update many")
+	assertPathMatchHandler(t, h.HandlersPipe()[6].(*PathMatchHandler), "/something", "PATCH", "update many")
 
 	// replace one
-	assertPathMatchHandler(t, h.HandlersPipe()[7].(*PathMatchHandler), "/something/123", "POST", "replace")
+	assertPathMatchHandler(t, h.HandlersPipe()[7].(*PathMatchHandler), "/something/123", "PUT", "replace")
 
 	// head
 	assertPathMatchHandler(t, h.HandlersPipe()[8].(*PathMatchHandler), "/something/123", "HEAD", "head")
@@ -461,18 +535,20 @@ func TestBeforeHandler(t *testing.T) {
 
 	h.MapController(cont)
 
+	log.Printf("%s", h)
+
 	if assert.Equal(t, 2, len(h.PreHandlersPipe()), "2 pre handler's expected") {
 		assertPathMatchHandler(t, h.PreHandlersPipe()[0].(*PathMatchHandler), "/test", "POST", "before POST /test")
-		assertPathMatchHandler(t, h.PreHandlersPipe()[1].(*PathMatchHandler), "/test/123", "POST", "before POST /test/123")
-		assertPathMatchHandler(t, h.PreHandlersPipe()[0].(*PathMatchHandler), "/test", "OPTIONS", "before options /test")
-		assertPathMatchHandler(t, h.PreHandlersPipe()[1].(*PathMatchHandler), "/test/123", "OPTIONS", "before options /test/123")
+		assertPathMatchHandler(t, h.PreHandlersPipe()[1].(*PathMatchHandler), "/test/123", "PUT", "before PUT /test/123")
+		assertPathMatchHandler(t, h.PreHandlersPipe()[0].(*PathMatchHandler), "/test", "OPTIONS", "before OPTIONS /test")
+		assertPathMatchHandler(t, h.PreHandlersPipe()[1].(*PathMatchHandler), "/test/123", "OPTIONS", "before OPTIONS /test/123")
 	}
 
 	if assert.Equal(t, 2, len(h.PostHandlersPipe()), "2 post handler's expected") {
 		assertPathMatchHandler(t, h.PostHandlersPipe()[0].(*PathMatchHandler), "/test", "POST", "after POST /test")
-		assertPathMatchHandler(t, h.PostHandlersPipe()[1].(*PathMatchHandler), "/test/123", "POST", "after POST /test/123")
-		assertPathMatchHandler(t, h.PostHandlersPipe()[0].(*PathMatchHandler), "/test", "OPTIONS", "after options /test")
-		assertPathMatchHandler(t, h.PostHandlersPipe()[1].(*PathMatchHandler), "/test/123", "OPTIONS", "after options /test/123")
+		assertPathMatchHandler(t, h.PostHandlersPipe()[1].(*PathMatchHandler), "/test/123", "PUT", "after PUT /test/123")
+		assertPathMatchHandler(t, h.PostHandlersPipe()[0].(*PathMatchHandler), "/test", "OPTIONS", "after OPTIONS /test")
+		assertPathMatchHandler(t, h.PostHandlersPipe()[1].(*PathMatchHandler), "/test/123", "OPTIONS", "after OPTIONS /test/123")
 	}
 
 }
