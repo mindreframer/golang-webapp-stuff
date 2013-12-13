@@ -1,4 +1,4 @@
-package main
+package fyrirtaekjaskra
 
 import (
 	"fmt"
@@ -23,9 +23,13 @@ var (
 
 type Address struct {
 	Street      string `json:"street"`
-	HouseNumber int    `json:"number"`
+	HouseNumber string `json:"number"`
 	Postcode    int    `json:"postcode"`
 	Place       string `json:"place"`
+}
+
+func (a Address) String() string {
+	return fmt.Sprintf("street:%s, house:%s, postcode:%d, place:%s", a.Street, a.HouseNumber, a.Postcode, a.Place)
 }
 
 type ISATType struct {
@@ -82,13 +86,13 @@ func (c Company) GuessDomain() string {
 
 	n := Asciify(c.Name)
 
-    // Trim the suffixes
+	// Trim the suffixes
 	for _, s := range suffixes {
 		n = strings.TrimSuffix(n, s)
-		n = strings.TrimSuffix(n, s + ".")
+		n = strings.TrimSuffix(n, s+".")
 	}
 
-    // Trim spaces and illegal characters.
+	// Trim spaces and illegal characters.
 	n = strings.TrimSpace(n)
 	for _, s := range []string{" ", ",", "."} {
 		n = strings.Replace(n, s, "", -1)

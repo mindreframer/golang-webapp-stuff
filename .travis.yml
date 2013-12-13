@@ -1,10 +1,12 @@
 language: go
-go: 1.1
+
+go:
+ - 1.1
+ - tip
 
 install:
- - go get github.com/moovweb/gokogiri
- - go get github.com/djimenez/iconv-go
- - go get labix.org/v2/mgo
+ - go get github.com/PuerkitoBio/goquery
+ - go get github.com/howbazaar/loggo
 
 script:
- - go test -v
+ - go test
