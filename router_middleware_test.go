@@ -8,20 +8,29 @@ import (
   assert "github.com/pilu/miniassert"
 )
 
-func newTestRequest(method, path string) (ResponseWriter, *httptest.ResponseRecorder, *http.Request) {
-  request, _ := http.NewRequest(method, path, nil)
-  recorder := httptest.NewRecorder()
+type fakeNotFoundHandlerContainer struct {
+  callsCount int
+}
+
+func (f *fakeNotFoundHandlerContainer) Handler(w ResponseWriter, r *Request) {
+  f.callsCount++
+}
+
+func newTestRequest(method, path string) (ResponseWriter, *httptest.ResponseRecorder, *Request) {
+  r, _      := http.NewRequest(method, path, nil)
+  request   := newRequest(r)
+  recorder  := httptest.NewRecorder()
 
   env := make(map[string]interface{})
-  appResponseWriter := newAppResponseWriter(recorder, &env)
+  responseWriter := newResponseWriter(recorder, &env)
 
-  return appResponseWriter, recorder, request
+  return responseWriter, recorder, request
 }
 
 func newTestRouterMiddleware() *RouterMiddleware {
   router := &Router{}
   router.routes = make(map[HttpMethod][]*Route)
-  router.beforeFilters = make([]BeforeFilterFunc, 0)
+  router.beforeFilters = make([]HttpHandleFunc, 0)
   router.middlewares = make([]Middleware, 0)
   routerMiddleware := &RouterMiddleware{ router }
 
@@ -30,11 +39,14 @@ func newTestRouterMiddleware() *RouterMiddleware {
 
 func TestRouterMiddleware_NotFound(t *testing.T) {
   routerMiddleware := newTestRouterMiddleware()
+  fakeNotFound := new(fakeNotFoundHandlerContainer)
+  routerMiddleware.router.NotFoundHandler = fakeNotFound.Handler
+
   responseWriter, recorder, request := newTestRequest("GET", "/")
   routerMiddleware.ServeHTTP(responseWriter, request, func() Middleware { return nil })
 
-  assert.Equal(t, 1, 1)
-  assert.Equal(t, 404, recorder.Code)
+  // checks that the router middleware calls router.handleNotFound
+  assert.Equal(t, 1, fakeNotFound.callsCount)
   assert.Equal(t, "", string(recorder.Body.Bytes()))
 }
 
@@ -42,7 +54,7 @@ func TestRouterMiddleware_Found(t *testing.T) {
   routerMiddleware := newTestRouterMiddleware()
   responseWriter, recorder, request := newTestRequest("GET", "/")
 
-  testRootHandler := func (w ResponseWriter, r *http.Request) {
+  testRootHandler := func (w ResponseWriter, r *Request) {
     fmt.Fprint(w, "Hello World")
   }
 

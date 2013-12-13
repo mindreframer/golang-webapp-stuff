@@ -3,21 +3,22 @@ package traffic
 import (
   "testing"
   "regexp"
-  "net/http"
   "net/url"
   "reflect"
   assert "github.com/pilu/miniassert"
 )
 
-func httpHandlerExample(r ResponseWriter, req *http.Request) {}
+func httpHandlerExample(r ResponseWriter, req *Request) {}
+func httpHandlerExample2(r ResponseWriter, req *Request) {}
 
 func TestNewRoute(t *testing.T) {
   path := "/categories/:category_id/posts/:id"
-  route := NewRoute(path, httpHandlerExample)
+  route := NewRoute(path, httpHandlerExample, httpHandlerExample2)
   assert.Type(t, "*traffic.Route", route)
   assert.Equal(t, path, route.Path)
+  assert.Equal(t, 2, len(route.Handlers))
 
-  expectedPathRegexp := regexp.MustCompile("^/categories/(?P<category_id>[^/#?]+)/posts/(?P<id>[^/#?]+)$")
+  expectedPathRegexp := regexp.MustCompile(`\A/categories/(?P<category_id>[^/#?]+)/posts/(?P<id>[^/#?]+)\z`)
   assert.Equal(t, expectedPathRegexp, route.PathRegexp)
 }
 
@@ -42,6 +43,16 @@ func TestRoute_Match(t *testing.T) {
       "/categories/:category_id/posts/:id",
       "/categories/foo/posts/bar",
       "category_id=foo&id=bar",
+    },
+    {
+      "/pages/:page_path*",
+      "/pages/foo/bar/baz",
+      "page_path=foo%2Fbar%2Fbaz",
+    },
+    {
+      "/pages/:page.html",
+      "/pages/foo.html",
+      "page=foo",
     },
   }
 
@@ -91,8 +102,8 @@ func TestRoute_Match_WithOptionalSegments(t *testing.T) {
 func TestRoute_AddBeforeFilterToRoute(t *testing.T) {
   route := NewRoute("/", httpHandlerExample)
   assert.Equal(t, 0, len(route.beforeFilters))
-  filterA := BeforeFilterFunc(func(w ResponseWriter, r *http.Request) bool { return true })
-  filterB := BeforeFilterFunc(func(w ResponseWriter, r *http.Request) bool { return true })
+  filterA := HttpHandleFunc(func(w ResponseWriter, r *Request) {})
+  filterB := HttpHandleFunc(func(w ResponseWriter, r *Request) {})
 
   route.AddBeforeFilter(filterA)
   assert.Equal(t, 1, len(route.beforeFilters))

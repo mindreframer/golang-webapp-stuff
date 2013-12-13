@@ -5,13 +5,74 @@ import (
   "bufio"
   "runtime"
   "strings"
-  "net/http"
   "html/template"
 )
 
 type ShowErrorsMiddleware struct {}
 
-var errorPageHtml string = `
+func (middleware ShowErrorsMiddleware) readErrorFileLines(filePath string, errorLine int) map[int]string {
+  lines := make(map[int]string)
+
+  file, err := os.Open(filePath)
+  if err != nil {
+    return lines
+  }
+
+  defer file.Close()
+
+  reader := bufio.NewReader(file)
+  currentLine := 0
+  for {
+    line, err := reader.ReadString('\n')
+    if err != nil || currentLine > errorLine + 5 {
+      break
+    }
+
+    currentLine++
+
+    if currentLine >= errorLine - 5 {
+      lines[currentLine] = strings.Replace(line, "\n", "", -1)
+    }
+  }
+
+  return lines
+}
+
+func (middleware ShowErrorsMiddleware) RenderError(w ResponseWriter, r *Request, err interface{}, stack []byte) {
+  _, filePath, line, _ := runtime.Caller(5)
+
+  data := map[string]interface{} {
+    "Error":    err,
+    "Stack":    string(stack),
+    "Params":   r.URL.Query(),
+    "Method":   r.Method,
+    "FilePath": filePath,
+    "Line":     line,
+    "Lines":    middleware.readErrorFileLines(filePath, line),
+  }
+
+  w.Header().Set("Content-Type", "text/html")
+  tpl := template.Must(template.New("ErrorPage").Parse(panicPageTpl))
+  tpl.Execute(w, data)
+}
+
+func (middleware ShowErrorsMiddleware) ServeHTTP(w ResponseWriter, r *Request, next NextMiddlewareFunc) {
+  defer func() {
+    if err := recover(); err != nil {
+      const size = 4096
+      stack := make([]byte, size)
+      stack = stack[:runtime.Stack(stack, false)]
+
+      middleware.RenderError(w, r, err, stack)
+    }
+  }()
+
+  if nextMiddleware := next(); nextMiddleware != nil {
+    nextMiddleware.ServeHTTP(w, r, next)
+  }
+}
+
+const panicPageTpl string = `
   <html>
     <head>
       <title>Traffic Panic</title>
@@ -124,67 +185,3 @@ var errorPageHtml string = `
   </body>
   </html>
   `
-
-func (middleware ShowErrorsMiddleware) readErrorFileLines(filePath string, errorLine int) map[int]string {
-  lines := make(map[int]string)
-
-  file, err := os.Open(filePath)
-  if err != nil {
-    return lines
-  }
-
-  defer file.Close()
-
-  reader := bufio.NewReader(file)
-  currentLine := 0
-  for {
-    line, err := reader.ReadString('\n')
-    if err != nil || currentLine > errorLine + 5 {
-      break
-    }
-
-    currentLine++
-
-    if currentLine >= errorLine - 5 {
-      lines[currentLine] = strings.Replace(line, "\n", "", -1)
-    }
-  }
-
-  return lines
-}
-
-func (middleware ShowErrorsMiddleware) RenderError(w ResponseWriter, r *http.Request, err interface{}, stack []byte) {
-  _, filePath, line, _ := runtime.Caller(5)
-
-  data := map[string]interface{} {
-    "Error":    err,
-    "Stack":    string(stack),
-    "Params":   r.URL.Query(),
-    "Method":   r.Method,
-    "FilePath": filePath,
-    "Line":     line,
-    "Lines":    middleware.readErrorFileLines(filePath, line),
-  }
-
-  w.Header().Set("Content-Type", "text/html")
-  tpl := template.Must(template.New("ErrorPage").Parse(errorPageHtml))
-  tpl.Execute(w, data)
-}
-
-func (middleware ShowErrorsMiddleware) ServeHTTP(w ResponseWriter, r *http.Request, next NextMiddlewareFunc) (ResponseWriter, *http.Request) {
-  defer func() {
-    if err := recover(); err != nil {
-      const size = 4096
-      stack := make([]byte, size)
-      stack = stack[:runtime.Stack(stack, false)]
-
-      middleware.RenderError(w, r, err, stack)
-    }
-  }()
-
-  if nextMiddleware := next(); nextMiddleware != nil {
-    w, r = nextMiddleware.ServeHTTP(w, r, next)
-  }
-
-  return w, r
-}

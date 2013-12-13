@@ -1,31 +1,30 @@
 package traffic
 
 import (
-  "net/http"
   "net/url"
   "regexp"
 )
 
-type HttpHandleFunc func(ResponseWriter, *http.Request)
-
 type Route struct {
-  Path string
-  PathRegexp *regexp.Regexp
-  Handler HttpHandleFunc
-  beforeFilters []BeforeFilterFunc
+  Path          string
+  PathRegexp    *regexp.Regexp
+  Handlers      []HttpHandleFunc
+  beforeFilters []HttpHandleFunc
 }
 
-func (route *Route) AddBeforeFilter(beforeFilter BeforeFilterFunc) *Route {
-  route.beforeFilters = append(route.beforeFilters, beforeFilter)
+func (route *Route) AddBeforeFilter(beforeFilters ...HttpHandleFunc) *Route {
+  route.beforeFilters = append(route.beforeFilters, beforeFilters...)
 
   return route
 }
 
-func NewRoute(path string, handler HttpHandleFunc) *Route {
-  route := &Route{}
-  route.Path = path
-  route.Handler = handler
-  route.PathRegexp = regexp.MustCompile(pathToRegexpString(path))
+func NewRoute(path string, handlers ...HttpHandleFunc) *Route {
+  route := &Route{
+    Path:       path,
+    Handlers:   handlers,
+    PathRegexp: regexp.MustCompile(pathToRegexpString(path)),
+  }
+
   return route
 }
 
