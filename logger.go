@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -30,11 +31,15 @@ func ApacheLogged(handler http.Handler) *ApacheLogger {
 func (al *ApacheLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	aw := &apacheResponseWriter{ResponseWriter: w}
 	al.handler.ServeHTTP(aw, r)
-	referer := r.Header.Get("Referer")
+	remoteAddr := r.RemoteAddr
+	if index := strings.LastIndex(remoteAddr, ":"); index != -1 {
+		remoteAddr = remoteAddr[:index]
+	}
+	referer := r.Referer()
 	if "" == referer {
 		referer = "-"
 	}
-	userAgent := r.Header.Get("User-Agent")
+	userAgent := r.UserAgent()
 	if "" == userAgent {
 		userAgent = "-"
 	}
@@ -43,13 +48,14 @@ func (al *ApacheLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		username = "-"
 	}
 	al.Printf(
-		"%s %s %s [%v] \"%s %s\" %d %d \"%s\" \"%s\"\n",
-		r.RemoteAddr,
+		"%s %s %s [%v] \"%s %s %s\" %d %d \"%s\" \"%s\"\n",
+		remoteAddr,
 		"-", // We're not supporting identd, sorry.
 		username,
-		time.Now(),
+		time.Now().Format("02/Jan/2006:15:04:05 -0700"),
 		r.Method,
 		r.RequestURI,
+		r.Proto,
 		aw.Status,
 		aw.Size,
 		referer,
@@ -62,8 +68,9 @@ func (al *ApacheLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // by a user-defined function.
 type Logger struct {
 	*log.Logger
-	handler  http.Handler
-	redactor Redactor
+	handler          http.Handler
+	redactor         Redactor
+	RequestIDCreator RequestIDCreator
 }
 
 // Logged returns an http.Handler that logs requests and responses, complete
@@ -71,9 +78,10 @@ type Logger struct {
 // redacted by a user-defined function.
 func Logged(handler http.Handler, redactor Redactor) *Logger {
 	return &Logger{
-		Logger:   log.New(os.Stdout, "", log.Ltime|log.Lmicroseconds),
-		handler:  handler,
-		redactor: redactor,
+		Logger:           log.New(os.Stdout, "", log.Ltime|log.Lmicroseconds),
+		handler:          handler,
+		redactor:         redactor,
+		RequestIDCreator: requestIDCreator,
 	}
 }
 
@@ -99,7 +107,7 @@ func (l *Logger) Println(v ...interface{}) { l.Output(2, fmt.Sprintln(v...)) }
 // ServeHTTP wraps the http.Request and http.ResponseWriter to log to standard
 // output and pass through to the underlying http.Handler.
 func (l *Logger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	requestID := NewRequestID()
+	requestID := l.RequestIDCreator(r)
 	l.Printf(
 		"%s > %s %s %s\n",
 		requestID,
@@ -134,6 +142,15 @@ type Redactor func(string) string
 // of each log entry.
 type RequestID string
 
+// A RequestIDCreator is a function that takes a request and returns a unique
+// RequestID for it.
+type RequestIDCreator func(r *http.Request) RequestID
+
+// Default RequestIDCreator implementation
+func requestIDCreator(r *http.Request) RequestID {
+	return NewRequestID()
+}
+
 // NewRequestID returns a new 16-character random RequestID.
 func NewRequestID() RequestID {
 	return RequestID(RandomBase62Bytes(16))
@@ -146,13 +163,17 @@ type apacheResponseWriter struct {
 }
 
 func (w *apacheResponseWriter) Write(p []byte) (int, error) {
-	w.Size += len(p)
-	return w.ResponseWriter.Write(p)
+	if w.Status == 0 {
+		w.WriteHeader(http.StatusOK)
+	}
+	size, err := w.ResponseWriter.Write(p)
+	w.Size += size
+	return size, err
 }
 
 func (w *apacheResponseWriter) WriteHeader(status int) {
-	w.Status = status
 	w.ResponseWriter.WriteHeader(status)
+	w.Status = status
 }
 
 type readCloser struct {
@@ -172,11 +193,15 @@ func (r *readCloser) Read(p []byte) (int, error) {
 type responseWriter struct {
 	http.ResponseWriter
 	*Logger
-	request   *http.Request
-	requestID RequestID
+	request     *http.Request
+	requestID   RequestID
+	wroteHeader bool
 }
 
 func (w *responseWriter) Write(p []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
 	if '\n' == p[len(p)-1] {
 		w.Println(w.requestID, "<", string(p[:len(p)-1]))
 	} else {
@@ -186,7 +211,14 @@ func (w *responseWriter) Write(p []byte) (int, error) {
 }
 
 func (w *responseWriter) WriteHeader(status int) {
-	w.Printf("%s < %s %d %s\n", w.requestID, w.request.Proto, status, http.StatusText(status))
+	w.wroteHeader = true
+	w.Printf(
+		"%s < %s %d %s\n",
+		w.requestID,
+		w.request.Proto,
+		status,
+		http.StatusText(status),
+	)
 	for name, values := range w.Header() {
 		for _, value := range values {
 			w.Printf("%s < %s: %s\n", w.requestID, name, value)
