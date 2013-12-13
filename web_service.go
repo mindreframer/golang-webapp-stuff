@@ -17,6 +17,7 @@ type WebService struct {
 	consumes       []string
 	pathParameters []*Parameter
 	filters        []FilterFunction
+	documentation  string
 }
 
 // Path specifies the root URL template path of the WebService.
@@ -85,12 +86,14 @@ func (w *WebService) Method(httpMethod string) *RouteBuilder {
 }
 
 // Produces specifies that this WebService can produce one or more MIME types.
+// Http requests must have one of these values set for the Accept header.
 func (w *WebService) Produces(contentTypes ...string) *WebService {
 	w.produces = contentTypes
 	return w
 }
 
-// Produces specifies that this WebService can consume one or more MIME types.
+// Consumes specifies that this WebService can consume one or more MIME types.
+// Http requests must have one of these values set for the Content-Type header.
 func (w *WebService) Consumes(accepts ...string) *WebService {
 	w.consumes = accepts
 	return w
@@ -117,9 +120,24 @@ func (w *WebService) Filter(filter FilterFunction) *WebService {
 	return w
 }
 
+// Doc is used to set the documentation of this service.
+func (w *WebService) Doc(plainText string) {
+	w.documentation = plainText
+}
+
+// Documentation returns it.
+func (w WebService) Documentation() string {
+	return w.documentation
+}
+
 /*
 	Convenience methods
 */
+
+// HEAD is a shortcut for .Method("HEAD").Path(subPath)
+func (w *WebService) HEAD(subPath string) *RouteBuilder {
+	return new(RouteBuilder).servicePath(w.rootPath).Method("HEAD").Path(subPath)
+}
 
 // GET is a shortcut for .Method("GET").Path(subPath)
 func (w *WebService) GET(subPath string) *RouteBuilder {

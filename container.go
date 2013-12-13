@@ -7,7 +7,6 @@ package restful
 import (
 	"bytes"
 	"fmt"
-	//"github.com/emicklei/hopwatch"
 	"log"
 	"net/http"
 	"runtime"
@@ -21,8 +20,9 @@ type Container struct {
 	serveMux               *http.ServeMux
 	isRegisteredOnRoot     bool
 	containerFilters       []FilterFunction
-	doNotRecover           bool          // default is false
-	router                 RouteSelector // default is a RouterJSR311
+	doNotRecover           bool // default is false
+	recoverHandleFunc      RecoverHandleFunction
+	router                 RouteSelector // default is a RouterJSR311, CurlyRouter is the faster alternative
 	contentEncodingEnabled bool          // default is false
 }
 
@@ -34,12 +34,23 @@ func NewContainer() *Container {
 		isRegisteredOnRoot:     false,
 		containerFilters:       []FilterFunction{},
 		doNotRecover:           false,
+		recoverHandleFunc:      logStackOnRecover,
 		router:                 RouterJSR311{},
 		contentEncodingEnabled: false}
 }
 
-// If DoNotRecover then panics will not be caught to return HTTP 500.
-// In that case, Route functions are responsible for handling any error situation.
+// RecoverHandleFunction declares functions that can be used to handle a panic situation.
+// The first argument is what recover() returns. The second must be used to communicate an error response.
+type RecoverHandleFunction func(interface{}, http.ResponseWriter)
+
+// RecoverHandler changes the default function (logStackOnRecover) to be called
+// when a panic is detected. DoNotRecover must be have its default value (=false).
+func (c *Container) RecoverHandler(handler RecoverHandleFunction) {
+	c.recoverHandleFunc = handler
+}
+
+// DoNotRecover controls whether panics will be caught to return HTTP 500.
+// If set to true, Route functions are responsible for handling any error situation.
 // Default value is false = recover from panics. This has performance implications.
 func (c *Container) DoNotRecover(doNot bool) {
 	c.doNotRecover = doNot
@@ -55,6 +66,7 @@ func (c *Container) EnableContentEncoding(enabled bool) {
 	c.contentEncodingEnabled = enabled
 }
 
+// Add a WebService to the Container. It will detect duplicate root paths and panic in that case.
 func (c *Container) Add(service *WebService) *Container {
 	if service.pathExpr == nil {
 		service.Path("") // lazy initialize path
@@ -86,12 +98,30 @@ func (c *Container) Add(service *WebService) *Container {
 	// cannot have duplicate root paths
 	for _, each := range c.webServices {
 		if each.RootPath() == service.RootPath() {
-			log.Fatalf("[restful] WebService with duplicate root path detected:['%s']", each.RootPath())
+			log.Fatalf("[restful] WebService with duplicate root path detected:['%v']", each)
 		}
 	}
 	c.webServices = append(c.webServices, service)
-	//hopwatch.Dump(c)
 	return c
+}
+
+// logStackOnRecover is the default RecoverHandleFunction and is called
+// when DoNotRecover is false and the recoverHandleFunc is not set for the container.
+// Default implementation logs the stacktrace and writes the stacktrace on the response.
+// This may be a security issue as it exposes sourcecode information.
+func logStackOnRecover(panicReason interface{}, httpWriter http.ResponseWriter) {
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("[restful] recover from panic situation: - %v\r\n", panicReason))
+	for i := 2; ; i += 1 {
+		_, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		buffer.WriteString(fmt.Sprintf("    %s:%d\r\n", file, line))
+	}
+	log.Println(buffer.String())
+	httpWriter.WriteHeader(http.StatusInternalServerError)
+	httpWriter.Write(buffer.Bytes())
 }
 
 // Dispatch the incoming Http Request to a matching WebService.
@@ -100,19 +130,7 @@ func (c *Container) dispatch(httpWriter http.ResponseWriter, httpRequest *http.R
 	if !c.doNotRecover { // catch all for 500 response
 		defer func() {
 			if r := recover(); r != nil {
-				var buffer bytes.Buffer
-				buffer.WriteString(fmt.Sprintf("[restful] recover from panic situation: - %v\r\n", r))
-				for i := 1; ; i += 1 {
-					_, file, line, ok := runtime.Caller(i)
-					if !ok {
-						break
-					}
-					buffer.WriteString(fmt.Sprintf("    %s:%d\r\n", file, line))
-				}
-
-				log.Println(buffer.String())
-				httpWriter.WriteHeader(http.StatusInternalServerError)
-				httpWriter.Write(buffer.Bytes())
+				c.recoverHandleFunc(r, httpWriter)
 				return
 			}
 		}()
@@ -142,15 +160,26 @@ func (c *Container) dispatch(httpWriter http.ResponseWriter, httpRequest *http.R
 			}()
 		}
 	}
-	// Find best match Route ; detected is false if no match was found
-	webService, route, detected := c.router.SelectRoute(
+	// Find best match Route ; err is non nil if no match was found
+	webService, route, err := c.router.SelectRoute(
 		c.webServices,
-		httpWriter,
 		httpRequest)
-	if !detected {
+	if err != nil {
 		// a non-200 response has already been written
 		// run container filters anyway ; they should not touch the response...
-		chain := FilterChain{Filters: c.containerFilters, Target: func(req *Request, resp *Response) {}} // nop
+		chain := FilterChain{Filters: c.containerFilters, Target: func(req *Request, resp *Response) {
+			switch err.(type) {
+			case ServiceError:
+				ser := err.(ServiceError)
+				httpWriter.WriteHeader(ser.Code)
+				httpWriter.Write([]byte(ser.Message))
+			}
+			// TODO
+			// err
+
+			// handle err here
+
+		}}
 		chain.ProcessFilter(newRequest(httpRequest), newResponse(writer))
 		return
 	}
@@ -231,6 +260,6 @@ func (c Container) computeAllowedMethods(req *Request) []string {
 // It is basic because no parameter or (produces) content-type information is given.
 func newBasicRequestResponse(httpWriter http.ResponseWriter, httpRequest *http.Request) (*Request, *Response) {
 	resp := newResponse(httpWriter)
-	resp.accept = httpRequest.Header.Get(HEADER_Accept)
+	resp.requestAccept = httpRequest.Header.Get(HEADER_Accept)
 	return newRequest(httpRequest), resp
 }
