@@ -1,12 +1,9 @@
 package tigertonic
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 )
 
@@ -61,7 +58,9 @@ func (mux *TrieServeMux) HandleNamespace(namespace string, handler http.Handler)
 // like this can be allowed.
 func (mux *TrieServeMux) Handler(r *http.Request) (http.Handler, string) {
 	params, handler, pattern := mux.find(r, strings.Split(r.URL.Path, "/")[1:])
-	r.URL.RawQuery = r.URL.RawQuery + "&" + params.Encode()
+	if 0 != len(params) {
+		r.URL.RawQuery = r.URL.RawQuery + "&" + params.Encode()
+	}
 	return handler, pattern
 }
 
@@ -99,7 +98,7 @@ func (mux *TrieServeMux) find(r *http.Request, paths []string) (url.Values, http
 		if handler, ok := mux.methods[r.Method]; ok {
 			return nil, handler, mux.pattern
 		}
-		return nil, methodNotAllowedHandler{mux}, ""
+		return nil, MethodNotAllowedHandler{mux}, ""
 	}
 	if _, ok := mux.paths[paths[0]]; ok {
 		return mux.paths[paths[0]].find(r, paths[1:])
@@ -117,75 +116,5 @@ func (mux *TrieServeMux) find(r *http.Request, paths []string) (url.Values, http
 		r.URL.Path = "/" + strings.Join(paths, "/")
 		return nil, handler, mux.pattern
 	}
-	return nil, NotFoundHandler(), ""
-}
-
-type methodNotAllowedHandler struct {
-	mux *TrieServeMux
-}
-
-func (h methodNotAllowedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	methods := []string{"OPTIONS"}
-	if _, ok := h.mux.methods["GET"]; ok {
-		methods = append(methods, "HEAD")
-	}
-	for method, _ := range h.mux.methods {
-		methods = append(methods, method)
-	}
-	sort.Strings(methods)
-	w.Header().Set("Allow", strings.Join(methods, ", "))
-	if "OPTIONS" == r.Method {
-		if method := r.Header.Get(CORSRequestMethod); method != "" {
-			w.Header().Set(CORSAllowMethods, strings.Join(methods, ", "))
-			if requestOrigin := r.Header.Get(CORSRequestOrigin); requestOrigin != "" {
-				allowedOrigin := ""
-				if cors, ok := h.mux.methods[method].(*CORSHandler); ok {
-					allowedOrigin = cors.getResponseOrigin(requestOrigin)
-				}
-
-				if allowedOrigin == "" {
-					allowedOrigin = "null"
-				}
-				w.Header().Set(CORSAllowOrigin, allowedOrigin)
-			}
-		}
-		if acceptJSON(r) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(map[string][]string{
-				"allow": methods,
-			}); nil != err {
-				log.Println(err)
-			}
-		} else {
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, strings.Join(methods, ", "))
-		}
-	} else {
-		description := fmt.Sprintf(
-			"only %s are allowed",
-			strings.Join(methods, ", "),
-		)
-		if acceptJSON(r) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			var e string
-			if SnakeCaseHTTPEquivErrors {
-				e = "method_not_allowed"
-			} else {
-				e = "tigertonic.MethodNotAllowed"
-			}
-			if err := json.NewEncoder(w).Encode(map[string]string{
-				"description": description,
-				"error":       e,
-			}); nil != err {
-				log.Println(err)
-			}
-		} else {
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			fmt.Fprint(w, description)
-		}
-	}
+	return nil, NotFoundHandler{}, ""
 }

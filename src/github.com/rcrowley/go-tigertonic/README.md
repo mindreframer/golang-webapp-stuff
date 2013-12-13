@@ -7,6 +7,12 @@ Like the Go language itself, Tiger Tonic strives to keep features orthogonal.  I
 
 Documentation: <http://godoc.org/github.com/rcrowley/go-tigertonic>
 
+Development mailing list: <https://groups.google.com/forum/#!forum/tigertonic-dev>
+
+Users mailing list: <https://groups.google.com/forum/#!forum/tigertonic-users>
+
+IRC: `#tigertonic` on `irc.freenode.net`
+
 `tigertonic.TrieServeMux`
 -------------------------
 
@@ -123,7 +129,7 @@ Wire it all up in `main.main`!
 
 ```go
 mux := tigertonic.NewTrieServeMux()
-mux.Handle("GET", "/stuff", tigertonic.Marshaled(tigertonic.Timed(myHandler, "myHandler", nil)))
+mux.Handle("GET", "/stuff", tigertonic.Timed(tigertonic.Marshaled(myHandler), "myHandler", nil))
 tigertonic.NewServer(":8000", tigertonic.Logged(mux, nil)).ListenAndServe()
 ```
 
