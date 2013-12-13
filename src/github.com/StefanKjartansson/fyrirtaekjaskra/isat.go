@@ -1,4 +1,4 @@
-package main
+package fyrirtaekjaskra
 
 import (
 	"regexp"
@@ -23,7 +23,7 @@ func ParseISATTypes(s string) (isats []ISATType, err error) {
 		}
 		matches := re.FindStringSubmatch(i)
 		if len(matches) > 0 {
-			it.Number, _ = strconv.Atoi(matches[1])
+			it.Number, err = strconv.Atoi(matches[1])
 			it.Description = matches[2]
 		} else {
 			it.Main = strings.Contains(i, "Aðal")
@@ -31,5 +31,6 @@ func ParseISATTypes(s string) (isats []ISATType, err error) {
 			it = ISATType{}
 		}
 	}
+
 	return
 }

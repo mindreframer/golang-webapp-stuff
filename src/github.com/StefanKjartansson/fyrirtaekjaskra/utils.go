@@ -1,47 +1,37 @@
-package main
+package fyrirtaekjaskra
 
 import (
-	"fmt"
+	"bytes"
+	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 )
 
-func ReadOrGetURL(filename string, url string) (content []byte, err error) {
+func ReadOrGetURL(filename string, url string) (io.Reader, error) {
 
 	if _, err := os.Stat(filename); err == nil {
-		content, err := ioutil.ReadFile(filename)
+		fi, err := os.Open(filename)
 		if err != nil {
-			panic(fmt.Sprintf("unable to read a file: %s", filename))
+			return nil, err
 		}
-		return content, nil
+		return fi, nil
 	}
 
-	log.Printf("Fetching: %s\n", url)
+	logger.Debugf("Fetching: %s\n", url)
 
 	res, err := http.Get(url)
 	if err != nil {
-		return
+		return nil, err
 	}
-	content, err = ioutil.ReadAll(res.Body)
+	content, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	err = ioutil.WriteFile(filename, content, 0644)
 
-	return content, nil
+	return bytes.NewReader(content), nil
 
-}
-
-func MakeBatch(count, size int) (x [][]int) {
-	slices := count / size
-	remainder := count % size
-	for i := 0; i < slices; i++ {
-		x = append(x, []int{i * size, i*size + size})
-	}
-	x[len(x)-1][1] += remainder
-	return
 }
