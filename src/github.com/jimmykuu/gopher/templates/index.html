@@ -7,17 +7,17 @@
 		<div>
 			<h3 class="pull-left">欢迎来到Golang中国社区</h3>
 		<ul class="nav nav-tabs pull-right">
-			{{if $utils.Equal .subActive "latestReply"}}
+			{{if eq .subActive "latestReply"}}
 				<li class="active"><a href="javascript:;">最近回复</a></li>
 			{{else}}
 				<li><a href="/">最近回复</a></li>
 			{{end}}
-			{{if $utils.Equal .subActive "latestCreate"}}
+			{{if eq .subActive "latestCreate"}}
 				<li class="active"><a href="javascript:;">最近发布</a></li>
 			{{else}}
 				<li><a href="/topics/latest">最近发布</a></li>
 			{{end}}
-			{{if $utils.Equal .subActive "noReply"}}
+			{{if eq .subActive "noReply"}}
 				<li class="active"><a href="javascript:;">尚未回复</a></li>
 			{{else}}
 				<li><a href="/topics/no_reply">尚未回复</a></li>
@@ -68,7 +68,7 @@
 				<div align="center">已注册用户：<a href="/signin">登录</a></div>
 			{{end}}
 		</div>
-		<a href="/topic/new" class="btn btn-success btn-lg btn-block" style="margin-bottom: 20px;">发表话题</a>
+        <a href="/topic/new" class="btn btn-success btn-lg btn-block" style="margin-bottom: 20px;"><i class="glyphicon glyphicon-edit"></i> 发表话题</a>
 		{{if .utils.HasAd "frongpage"}}
 		<div class="well sidebar-nav">
 			{{.utils.AdCode "frongpage"}}

@@ -8,21 +8,21 @@ import (
 	"bytes"
 	"crypto/md5"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
-	"github.com/jimmykuu/webhelpers"
-	"github.com/jimmykuu/wtforms"
 	"html/template"
 	"io"
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"net/http"
-	"net/smtp"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
+	"github.com/jimmykuu/webhelpers"
+	"github.com/jimmykuu/wtforms"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 const (
@@ -83,10 +83,6 @@ func (u *Utils) Index(index int) int {
 	return index + 1
 }
 
-func (u *Utils) Equal(src, dest string) bool {
-	return src == dest
-}
-
 func (u *Utils) FormatTime(t time.Time) string {
 	now := time.Now()
 	duration := now.Sub(t)
@@ -125,6 +121,11 @@ func (u *Utils) Truncate(html template.HTML, length int) string {
 
 func (u *Utils) HTML(str string) template.HTML {
 	return template.HTML(str)
+}
+
+// \n => <br>
+func (u *Utils) Br(str string) template.HTML {
+	return template.HTML(strings.Replace(str, "\n", "<br>", -1))
 }
 
 func (u *Utils) RenderInput(form wtforms.Form, fieldStr string, inputAttrs ...string) template.HTML {
@@ -246,20 +247,6 @@ func Page(r *http.Request) (int, error) {
 	}
 
 	return page, nil
-}
-
-func sendMail(subject string, message string, to []string) {
-	auth := smtp.PlainAuth(
-		"",
-		Config.SmtpUsername,
-		Config.SmtpPassword,
-		Config.SmtpHost,
-	)
-	msg := fmt.Sprintf("To: %s\r\nFrom: jimmykuu@126.com\r\nSubject: %s\r\nContent-Type: text/html\r\n\r\n%s", strings.Join(to, ";"), subject, message)
-	err := smtp.SendMail(Config.SmtpAddr, auth, Config.FromEmail, to, []byte(msg))
-	if err != nil {
-		panic(err)
-	}
 }
 
 // 检查一个string元素是否在数组里面
