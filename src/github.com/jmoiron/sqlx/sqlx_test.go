@@ -23,9 +23,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"os/user"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
+
+/* compile time checks that Db, Tx, Stmt (qStmt) implement expected interfaces */
+var _, _ Ext = &DB{}, &Tx{}
+var _, _ ColScanner = &Row{}, &Rows{}
+var _ Queryer = &qStmt{}
+var _ Execer = &qStmt{}
 
 var TestPostgres = true
 var TestSqlite = true
@@ -74,7 +82,7 @@ func PostgresConnect() {
 
 	pgdb, err = Connect("postgres", dsn)
 	if err != nil {
-		fmt.Printf("Could not connect to postgres, try `createdb sqlxtext`, disabling PG tests:\n	%v\n", err)
+		fmt.Printf("Could not connect to postgres, try `createdb sqlxtest`, disabling PG tests:\n	%v\n", err)
 		TestPostgres = false
 	}
 }
@@ -90,7 +98,7 @@ func SqliteConnect() {
 	var path string
 	var err error
 
-	path = os.Getenv("SQLX_SQLITE_PATH")
+	path = os.Getenv("SQLX_SQLITEPATH")
 	if len(path) == 0 {
 		path = "/tmp/sqlxtest.db"
 	}
@@ -125,7 +133,7 @@ func MysqlConnect() {
 			username = u.Username
 		}
 	}
-	mysqldb, err = Connect("mysql", fmt.Sprintf("%s:%s@/%s", username, password, dbname))
+	mysqldb, err = Connect("mysql", fmt.Sprintf("%s:%s@/%s?parseTime=true", username, password, dbname))
 	if err != nil {
 		fmt.Printf("Could not connect to mysql db, try `mysql -e 'create database sqlxtest'`, disabling MySQL tests:\n    %v", err)
 		TestMysql = false
@@ -136,7 +144,8 @@ var schema = `
 CREATE TABLE person (
 	first_name text,
 	last_name text,
-	email text
+	email text,
+	added_at timestamp default now()
 );
 
 CREATE TABLE place (
@@ -153,6 +162,7 @@ CREATE TABLE capplace (
 `
 
 var mysqlSchema = strings.Replace(schema, `"`, "`", -1)
+var sqliteSchema = strings.Replace(schema, `now()`, `CURRENT_TIMESTAMP`, -1)
 
 var drop = `
 drop table person;
@@ -164,12 +174,48 @@ type Person struct {
 	FirstName string `db:"first_name"`
 	LastName  string `db:"last_name"`
 	Email     string
+	AddedAt   time.Time `db:"added_at"`
 }
 
 type Place struct {
 	Country string
 	City    sql.NullString
 	TelCode int
+}
+
+type PersonPlace struct {
+	Person
+	Place
+}
+
+type NonEmbedded struct {
+	Person Person
+	Place  Place
+}
+
+type EmbedConflict struct {
+	FirstName string `db:"first_name"`
+	Person
+}
+
+type Loop1 struct {
+	Person
+}
+
+type Loop2 struct {
+	Loop1
+}
+
+type Loop3 struct {
+	Loop2
+}
+
+type SliceMember struct {
+	Country   string
+	City      sql.NullString
+	TelCode   int
+	People    []Person `db:"-"`
+	Addresses []Place  `db:"-"`
 }
 
 // Note that because of field map caching, we need a new type here
@@ -204,6 +250,8 @@ func TestUsage(t *testing.T) {
 			db.Execf(schema)
 		case "mysql":
 			MultiExec(db, mysqlSchema)
+		case "sqlite3":
+			MultiExec(db, sqliteSchema)
 		default:
 			MultiExec(db, schema)
 		}
@@ -219,6 +267,66 @@ func TestUsage(t *testing.T) {
 			tx.Execl(tx.Rebind("INSERT INTO capplace (\"COUNTRY\", \"TELCODE\") VALUES (?, ?)"), "Sarf Efrica", "27")
 		}
 		tx.Commit()
+
+		// test embedded structs
+		peopleAndPlaces := []PersonPlace{}
+		err = db.Select(
+			&peopleAndPlaces,
+			`SELECT person.*, place.* FROM
+             person natural join place`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, pp := range peopleAndPlaces {
+			if len(pp.Person.FirstName) == 0 {
+				t.Errorf("Expected non zero lengthed first name.")
+			}
+			if len(pp.Place.Country) == 0 {
+				t.Errorf("Expected non zero lengthed country.")
+			}
+		}
+
+		// test "non embedded" struct namespace collapsing..
+		nes := []NonEmbedded{}
+		err = db.Select(&nes, `select person.*, place.* FROM person natural join place`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, ne := range nes {
+			if len(ne.Person.FirstName) == 0 {
+				t.Errorf("Expected non zero lengthed first name.")
+			}
+			if len(ne.Place.Country) == 0 {
+				t.Errorf("Expected non zero lengthed country.")
+			}
+		}
+
+		// test "deep nesting"
+		l3s := []Loop3{}
+		err = db.Select(&l3s, `select * from person`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, l3 := range l3s {
+			if len(l3.Loop2.Loop1.Person.FirstName) == 0 {
+				t.Errorf("Expected non zero lengthed first name.")
+			}
+		}
+
+		// test "embed conflicts"
+		ec := []EmbedConflict{}
+		err = db.Select(&ec, `select * from person`)
+		// I'm torn between erroring here or having some kind of working behavior
+		// in order to allow for more flexibility in destination structs
+		if err != nil {
+			t.Errorf("Was not expecting an error on embed conflicts.")
+		}
+
+		slicemembers := []SliceMember{}
+		err = db.Select(&slicemembers, "SELECT * FROM place ORDER BY telcode ASC")
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		people := []Person{}
 
@@ -259,8 +367,43 @@ func TestUsage(t *testing.T) {
 			t.Errorf("Expected sql.ErrNoRows, got %v\n", err)
 		}
 
-		places := []*Place{}
+		// The following tests check statement reuse, which was actually a problem
+		// due to copying being done when creating Stmt's which was eventually removed
+		stmt1, err := db.Preparex(db.Rebind("SELECT * FROM person WHERE first_name=?"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		jason = Person{}
 
+		row := stmt1.QueryRowx("DoesNotExist")
+		row.Scan(&jason)
+		row = stmt1.QueryRowx("DoesNotExist")
+		row.Scan(&jason)
+
+		err = stmt1.Get(&jason, "DoesNotExist User")
+		if err == nil {
+			t.Error("Expected an error")
+		}
+		err = stmt1.Get(&jason, "DoesNotExist User 2")
+
+		stmt2, err := db.Preparex(db.Rebind("SELECT * FROM person WHERE first_name=?"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		jason = Person{}
+		tx, err = db.Beginx()
+		if err != nil {
+			t.Fatal(err)
+		}
+		tstmt2 := tx.Stmtx(stmt2)
+		row2 := tstmt2.QueryRowx("Jason")
+		err = row2.StructScan(&jason)
+		if err != nil {
+			t.Error(err)
+		}
+		tx.Commit()
+
+		places := []*Place{}
 		err = db.Select(&places, "SELECT telcode FROM place ORDER BY telcode ASC")
 		usa, singsing, honkers := places[0], places[1], places[2]
 
@@ -281,7 +424,7 @@ func TestUsage(t *testing.T) {
 			t.Errorf("Expected an error, argument to select should be a pointer to a struct slice")
 		}
 
-		// this should be an error because
+		// this should be an error
 		pl := []Place{}
 		err = db.Select(pl, "SELECT * FROM place ORDER BY telcode ASC")
 		if err == nil {
@@ -319,6 +462,36 @@ func TestUsage(t *testing.T) {
 			err = rows.StructScan(&place)
 			if err != nil {
 				t.Fatal(err)
+			}
+		}
+
+		rows, err = db.Queryx("SELECT * FROM place")
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := map[string]interface{}{}
+		for rows.Next() {
+			err = rows.MapScan(m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, ok := m["country"]
+			if !ok {
+				t.Errorf("Expected key `country` in map but could not find it (%#v)\n", m)
+			}
+		}
+
+		rows, err = db.Queryx("SELECT * FROM place")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rows.Next() {
+			s, err := rows.SliceScan()
+			if err != nil {
+				t.Error(err)
+			}
+			if len(s) != 3 {
+				t.Errorf("Expected 3 columns in result, got %d\n", len(s))
 			}
 		}
 
@@ -440,6 +613,10 @@ func TestUsage(t *testing.T) {
 	}
 }
 
+type Product struct {
+	ProductID int
+}
+
 // tests that sqlx will not panic when the wrong driver is passed because
 // of an automatic nil dereference in sqlx.Open(), which was fixed.
 func TestDoNotPanicOnConnect(t *testing.T) {
@@ -448,7 +625,6 @@ func TestDoNotPanicOnConnect(t *testing.T) {
 		t.Errorf("Should return error when using bogus driverName")
 	}
 }
-
 func TestRebind(t *testing.T) {
 	q1 := `INSERT INTO foo (a, b, c, d, e, f, g, h, i) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	q2 := `INSERT INTO foo (a, b, c) VALUES (?, ?, "foo"), ("Hi", ?, ?)`
@@ -506,6 +682,12 @@ func TestBindStruct(t *testing.T) {
 		First string
 		Last  string
 	}
+
+	type tt2 struct {
+		Field1 string `db:"field_1"`
+		Field2 string `db:"field_2"`
+	}
+
 	am := tt{"Jason Moiron", 30, "Jason", "Moiron"}
 
 	bq, args, _ := BindStruct(QUESTION, q1, am)
@@ -528,6 +710,20 @@ func TestBindStruct(t *testing.T) {
 
 	if args[3].(string) != "Moiron" {
 		t.Errorf("Expected Moiron, got %v\n", args[3])
+	}
+
+	am2 := tt2{"Hello", "World"}
+	bq, args, _ = BindStruct(QUESTION, "INSERT INTO foo (a, b) VALUES (:field_2, :field_1)", am2)
+	expect = `INSERT INTO foo (a, b) VALUES (?, ?)`
+	if bq != expect {
+		t.Errorf("Interpolation of query failed: got `%v`, expected `%v`\n", bq, expect)
+	}
+
+	if args[0].(string) != "World" {
+		t.Errorf("Expected 'World', got %s\n", args[0].(string))
+	}
+	if args[1].(string) != "Hello" {
+		t.Errorf("Expected 'Hello', got %s\n", args[1].(string))
 	}
 
 }
@@ -586,5 +782,24 @@ func BenchmarkRebindBuffer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		rebindBuff(DOLLAR, q1)
 		rebindBuff(DOLLAR, q2)
+	}
+}
+
+func TestGetFieldMap(t *testing.T) {
+	testing_table := map[reflect.Type]fieldmap{
+		reflect.TypeOf(new(Person)): {"first_name": 0, "last_name": 1, "email": 2, "added_at": 3},
+		reflect.TypeOf(new(Place)):  {"country": 0, "city": 1, "telcode": 2},
+		reflect.TypeOf(new(PersonPlace)): {
+			"first_name": 0, "last_name": 1, "email": 2, "added_at": 3,
+			"country": 4, "city": 5, "telcode": 6},
+	}
+	for typ, expected := range testing_table {
+		fields, err := getFieldmap(typ)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(fields, expected) {
+			t.Fatalf("wtf %v %v", fields, expected)
+		}
 	}
 }
