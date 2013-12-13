@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -88,6 +89,16 @@ type PersonUInt16 struct {
 type WithEmbeddedStruct struct {
 	Id int64
 	Names
+}
+
+type WithEmbeddedStructBeforeAutoincrField struct {
+	Names
+	Id int64
+}
+
+type WithEmbeddedAutoincr struct {
+	WithEmbeddedStruct
+	MiddleName string
 }
 
 type Names struct {
@@ -191,7 +202,7 @@ type PersistentUser struct {
 
 func TestCreateTablesIfNotExists(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	err := dbmap.CreateTablesIfNotExists()
 	if err != nil {
@@ -201,7 +212,7 @@ func TestCreateTablesIfNotExists(t *testing.T) {
 
 func TestTruncateTables(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 	err := dbmap.CreateTablesIfNotExists()
 	if err != nil {
 		t.Error(err)
@@ -239,7 +250,7 @@ func TestUIntPrimaryKey(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	p1 := &PersonUInt64{0, "name1"}
 	p2 := &PersonUInt32{0, "name2"}
@@ -269,7 +280,7 @@ func TestPersistentUser(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer dbmap.DropTablesIfExists()
+	defer dropAndClose(dbmap)
 	pu := &PersistentUser{43, "33r", false}
 	err = dbmap.Insert(pu)
 	if err != nil {
@@ -382,7 +393,7 @@ func TestNamedQueryMap(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer dbmap.DropTablesIfExists()
+	defer dropAndClose(dbmap)
 	pu := &PersistentUser{43, "33r", false}
 	pu2 := &PersistentUser{500, "abc", false}
 	err = dbmap.Insert(pu, pu2)
@@ -467,7 +478,7 @@ func TestNamedQueryStruct(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer dbmap.DropTablesIfExists()
+	defer dropAndClose(dbmap)
 	pu := &PersistentUser{43, "33r", false}
 	pu2 := &PersistentUser{500, "abc", false}
 	err = dbmap.Insert(pu, pu2)
@@ -497,7 +508,7 @@ select * from PersistentUser
 // Ensure that the slices containing SQL results are non-nil when the result set is empty.
 func TestReturnsNonNilSlice(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 	noResultsSQL := "select * from invoice_test where id=99999"
 	var r1 []*Invoice
 	_rawselect(dbmap, &r1, noResultsSQL)
@@ -520,7 +531,7 @@ func TestOverrideVersionCol(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 	c1 := t1.SetVersionCol("LegacyVersion")
 	if c1.ColumnName != "LegacyVersion" {
 		t.Errorf("Wrong col returned: %v", c1)
@@ -535,7 +546,7 @@ func TestOverrideVersionCol(t *testing.T) {
 
 func TestOptimisticLocking(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	p1 := &Person{0, 0, 0, "Bob", "Smith", 0}
 	dbmap.Insert(p1) // Version is now 1
@@ -590,7 +601,7 @@ func TestDoubleAddTable(t *testing.T) {
 // what happens if a legacy table has a null value?
 func TestNullValues(t *testing.T) {
 	dbmap := initDbMapNulls()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	// insert a row directly
 	_rawexec(dbmap, "insert into TableWithNull values (10, null, "+
@@ -640,7 +651,7 @@ func TestColumnProps(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	// test transient
 	inv := &Invoice{0, 0, 1, "my invoice", 0, true}
@@ -668,7 +679,7 @@ func TestColumnProps(t *testing.T) {
 
 func TestRawSelect(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	p1 := &Person{0, 0, 0, "bob", "smith", 0}
 	_insert(dbmap, p1)
@@ -691,7 +702,7 @@ func TestRawSelect(t *testing.T) {
 
 func TestHooks(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	p1 := &Person{0, 0, 0, "bob", "smith", 0}
 	_insert(dbmap, p1)
@@ -738,7 +749,7 @@ func TestHooks(t *testing.T) {
 
 func TestTransaction(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	inv1 := &Invoice{0, 100, 200, "t1", 0, true}
 	inv2 := &Invoice{0, 100, 200, "t2", 0, false}
@@ -771,7 +782,7 @@ func TestTransaction(t *testing.T) {
 
 func TestSavepoint(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	inv1 := &Invoice{0, 100, 200, "unpaid", 0, false}
 
@@ -819,7 +830,7 @@ func TestSavepoint(t *testing.T) {
 
 func TestMultiple(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	inv1 := &Invoice{0, 100, 200, "a", 0, false}
 	inv2 := &Invoice{0, 100, 200, "b", 0, true}
@@ -837,7 +848,7 @@ func TestMultiple(t *testing.T) {
 
 func TestCrud(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	inv := &Invoice{0, 100, 200, "first order", 0, true}
 
@@ -885,7 +896,7 @@ func TestCrud(t *testing.T) {
 
 func TestWithIgnoredColumn(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	ic := &WithIgnoredColumn{-1, 0, 1}
 	_insert(dbmap, ic)
@@ -906,7 +917,7 @@ func TestWithIgnoredColumn(t *testing.T) {
 
 func TestTypeConversionExample(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	p := Person{FName: "Bob", LName: "Smith"}
 	tc := &TypeConversionExample{-1, p, CustomStringType("hi")}
@@ -936,7 +947,7 @@ func TestTypeConversionExample(t *testing.T) {
 
 func TestWithEmbeddedStruct(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	es := &WithEmbeddedStruct{-1, Names{FirstName: "Alice", LastName: "Smith"}}
 	_insert(dbmap, es)
@@ -960,9 +971,36 @@ func TestWithEmbeddedStruct(t *testing.T) {
 	}
 }
 
+func TestWithEmbeddedStructBeforeAutoincr(t *testing.T) {
+	dbmap := initDbMap()
+	defer dropAndClose(dbmap)
+
+	esba := &WithEmbeddedStructBeforeAutoincrField{Names: Names{FirstName: "Alice", LastName: "Smith"}}
+	_insert(dbmap, esba)
+	var expectedAutoincrId int64 = 1
+	if esba.Id != expectedAutoincrId {
+		t.Errorf("%d != %d", expectedAutoincrId, esba.Id)
+	}
+}
+
+func TestWithEmbeddedAutoincr(t *testing.T) {
+	dbmap := initDbMap()
+	defer dropAndClose(dbmap)
+
+	esa := &WithEmbeddedAutoincr{
+		WithEmbeddedStruct: WithEmbeddedStruct{Names: Names{FirstName: "Alice", LastName: "Smith"}},
+		MiddleName:         "Rose",
+	}
+	_insert(dbmap, esa)
+	var expectedAutoincrId int64 = 1
+	if esa.Id != expectedAutoincrId {
+		t.Errorf("%d != %d", expectedAutoincrId, esa.Id)
+	}
+}
+
 func TestSelectVal(t *testing.T) {
 	dbmap := initDbMapNulls()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	bindVar := dbmap.Dialect.BindVar(0)
 
@@ -1056,7 +1094,7 @@ func TestSelectVal(t *testing.T) {
 
 func TestVersionMultipleRows(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	persons := []*Person{
 		&Person{0, 0, 0, "Bob", "Smith", 0},
@@ -1081,7 +1119,7 @@ func TestWithStringPk(t *testing.T) {
 	if err != nil {
 		t.Errorf("couldn't create string_pk_test: %v", err)
 	}
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	row := &WithStringPk{"1", "foo"}
 	err = dbmap.Insert(row)
@@ -1090,24 +1128,58 @@ func TestWithStringPk(t *testing.T) {
 	}
 }
 
+// TestSqlExecutorInterfaceSelects ensures that all DbMap methods starting with Select...
+// are also exposed in the SqlExecutor interface. Select...  functions can always
+// run on Pre/Post hooks.
+func TestSqlExecutorInterfaceSelects(t *testing.T) {
+	dbMapType := reflect.TypeOf(&DbMap{})
+	sqlExecutorType := reflect.TypeOf((*SqlExecutor)(nil)).Elem()
+	numDbMapMethods := dbMapType.NumMethod()
+	for i := 0; i < numDbMapMethods; i += 1 {
+		dbMapMethod := dbMapType.Method(i)
+		if !strings.HasPrefix(dbMapMethod.Name, "Select") {
+			continue
+		}
+		if _, found := sqlExecutorType.MethodByName(dbMapMethod.Name); !found {
+			t.Errorf("Method %s is defined on DbMap but not implemented in SqlExecutor",
+				dbMapMethod.Name)
+		}
+	}
+}
+
 type WithTime struct {
 	Id   int64
 	Time time.Time
 }
 
-// TODO: re-enable this test when this is merged:
+type Times struct {
+	One time.Time
+	Two time.Time
+}
+
+type EmbeddedTime struct {
+	Id string
+	Times
+}
+
+func parseTimeOrPanic(format, date string) time.Time {
+	t1, err := time.Parse(format, date)
+	if err != nil {
+		panic(err)
+	}
+	return t1
+}
+
+// TODO: re-enable next two tests when this is merged:
 // https://github.com/ziutek/mymysql/pull/77
 //
 // This test currently fails w/MySQL b/c tz info is lost
 func testWithTime(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
-	t1, err := time.Parse("2006-01-02 15:04:05 -0700 MST",
+	t1 := parseTimeOrPanic("2006-01-02 15:04:05 -0700 MST",
 		"2013-08-09 21:30:43 +0800 CST")
-	if err != nil {
-		panic(err)
-	}
 	w1 := WithTime{1, t1}
 	_insert(dbmap, &w1)
 
@@ -1118,9 +1190,32 @@ func testWithTime(t *testing.T) {
 	}
 }
 
+// See: https://github.com/coopernurse/gorp/issues/86
+func testEmbeddedTime(t *testing.T) {
+	dbmap := newDbMap()
+	dbmap.TraceOn("", log.New(os.Stdout, "gorptest: ", log.Lmicroseconds))
+	dbmap.AddTable(EmbeddedTime{}).SetKeys(false, "Id")
+	defer dropAndClose(dbmap)
+	err := dbmap.CreateTables()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time1 := parseTimeOrPanic("2006-01-02 15:04:05", "2013-08-09 21:30:43")
+
+	t1 := &EmbeddedTime{Id: "abc", Times: Times{One: time1, Two: time1.Add(10 * time.Second)}}
+	_insert(dbmap, t1)
+
+	x := _get(dbmap, EmbeddedTime{}, t1.Id)
+	t2, _ := x.(*EmbeddedTime)
+	if t1.One.UnixNano() != t2.One.UnixNano() || t1.Two.UnixNano() != t2.Two.UnixNano() {
+		t.Errorf("%v != %v", t1, t2)
+	}
+}
+
 func TestWithTimeSelect(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	halfhourago := time.Now().UTC().Add(-30 * time.Minute)
 
@@ -1134,6 +1229,9 @@ func TestWithTimeSelect(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	if len(caseIds) != 1 {
+		t.Errorf("%d != 1", len(caseIds))
+	}
 	if caseIds[0] != w1.Id {
 		t.Errorf("%d != %d", caseIds[0], w1.Id)
 	}
@@ -1141,7 +1239,7 @@ func TestWithTimeSelect(t *testing.T) {
 
 func TestInvoicePersonView(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	// Create some rows
 	p1 := &Person{0, 0, 0, "bob", "smith", 0}
@@ -1173,7 +1271,7 @@ func TestInvoicePersonView(t *testing.T) {
 
 func TestQuoteTableNames(t *testing.T) {
 	dbmap := initDbMap()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 
 	quotedTableName := dbmap.Dialect.QuoteField("person_test")
 
@@ -1200,10 +1298,68 @@ func TestQuoteTableNames(t *testing.T) {
 	logBuffer.Reset()
 }
 
+func TestSelectSingleVal(t *testing.T) {
+	dbmap := initDbMap()
+	defer dropAndClose(dbmap)
+
+	p1 := &Person{0, 0, 0, "bob", "smith", 0}
+	_insert(dbmap, p1)
+
+	obj := _get(dbmap, Person{}, p1.Id)
+	p1 = obj.(*Person)
+
+	params := map[string]interface{}{
+		"Id": p1.Id,
+	}
+
+	var p2 Person
+	err := dbmap.SelectOne(&p2, "select * from person_test where Id=:Id", params)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !reflect.DeepEqual(p1, &p2) {
+		t.Errorf("%v != %v", p1, &p2)
+	}
+
+	// verify SelectOne allows non-struct holders
+	var s string
+	err = dbmap.SelectOne(&s, "select FName from person_test where Id=:Id", params)
+	if err != nil {
+		t.Error(err)
+	}
+	if s != "bob" {
+		t.Error("Expected bob but got: " + s)
+	}
+
+	// verify SelectOne requires pointer receiver
+	err = dbmap.SelectOne(s, "select FName from person_test where Id=:Id", params)
+	if err == nil {
+		t.Error("SelectOne should have returned error for non-pointer holder")
+	}
+
+	// verify that pointer is set to zero val if not found
+	err = dbmap.SelectOne(&p2, "select * from person_test where Id=:Id", map[string]interface{}{
+		"Id": -2222,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if p2.Id != 0 {
+		t.Errorf("p2.Id != 0: %d", p2.Id)
+	}
+
+	_insert(dbmap, &Person{0, 0, 0, "bob", "smith", 0})
+	err = dbmap.SelectOne(&p2, "select * from person_test where Fname='bob'")
+	if err == nil {
+		t.Error("Expected nil when two rows found")
+	}
+}
+
 func BenchmarkNativeCrud(b *testing.B) {
 	b.StopTimer()
 	dbmap := initDbMapBench()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 	b.StartTimer()
 
 	insert := "insert into invoice_test (Created, Updated, Memo, PersonId) values (?, ?, ?, ?)"
@@ -1255,7 +1411,7 @@ func BenchmarkNativeCrud(b *testing.B) {
 func BenchmarkGorpCrud(b *testing.B) {
 	b.StopTimer()
 	dbmap := initDbMapBench()
-	defer dbmap.DropTables()
+	defer dropAndClose(dbmap)
 	b.StartTimer()
 
 	inv := &Invoice{0, 100, 200, "my memo", 0, true}
@@ -1311,6 +1467,8 @@ func initDbMap() *DbMap {
 	dbmap.AddTableWithName(WithIgnoredColumn{}, "ignored_column_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(TypeConversionExample{}, "type_conv_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithEmbeddedStruct{}, "embedded_struct_test").SetKeys(true, "Id")
+	dbmap.AddTableWithName(WithEmbeddedStructBeforeAutoincrField{}, "embedded_struct_before_autoincr_test").SetKeys(true, "Id")
+	dbmap.AddTableWithName(WithEmbeddedAutoincr{}, "embedded_autoincr_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithTime{}, "time_test").SetKeys(true, "Id")
 	dbmap.TypeConverter = testTypeConverter{}
 	err := dbmap.CreateTables()
@@ -1335,6 +1493,11 @@ func initDbMapNulls() *DbMap {
 func newDbMap() *DbMap {
 	dialect, driver := dialectAndDriver()
 	return &DbMap{Db: connect(driver), Dialect: dialect}
+}
+
+func dropAndClose(dbmap *DbMap) {
+	dbmap.DropTablesIfExists()
+	dbmap.Db.Close()
 }
 
 func connect(driver string) *sql.DB {
