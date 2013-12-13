@@ -1,11 +1,19 @@
-// Proxy accepts the request, calls the control service for instructions
-// And takes actions according to instructions received.
+// This package contains the proxy core - the main proxy function that accepts and modifies
+// request, forwards or denies it.
 package vulcan
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/golang/glog"
+	"github.com/mailgun/vulcan/backend"
+	"github.com/mailgun/vulcan/client"
+	"github.com/mailgun/vulcan/command"
+	"github.com/mailgun/vulcan/control"
+	"github.com/mailgun/vulcan/loadbalance"
+	"github.com/mailgun/vulcan/netutils"
+	"github.com/mailgun/vulcan/ratelimit"
 	"io"
 	"io/ioutil"
 	"net"
@@ -14,36 +22,15 @@ import (
 	"time"
 )
 
-// On every request proxy asks control server what to do
-// with the request, control server replies with this structure
-// or rejects the request.
-type ProxyInstructions struct {
-	// Allows proxy to fall back to the next upstream
-	// if the selected upstream failed
-	Failover bool
-	// Tokens uniquely identify the requester. E.g. token can be account id or
-	// combination of ip and account id. Tokens can be throttled as well.
-	// The reply can have 0 or several tokens
-	Tokens []*Token
-	// List of upstreams that can accept this request. Load balancer will
-	// choose an upstream based on the algo, e.g. random, round robin,
-	// or least connections. At least one upstream is required.
-	Upstreams []*Upstream
-	// If supplied, headers will be added to the proxied request.
-	Headers http.Header
-}
-
-// Defines Reverse proxy runtime settings, what loadbalancing algo to use,
-// timeouts, throttling backend.
+// Reverse proxy settings, what loadbalancing algo to use,
+// timeouts, rate limiting backend
 type ProxySettings struct {
-	// List of http urls of servers controlling the reqquest,
-	// see ControlRequest for details
-	ControlServers []string
-	// Any backend that would be used by throttler to keep throttling stats,
-	// e.g. MemoryBackend or CassandraBackend
-	ThrottlerBackend Backend
+	// Controlller tells proxy what to do with each request
+	Controller control.Controller
+	// MemoryBackend or CassandraBackend
+	ThrottlerBackend backend.Backend
 	// Load balancing algo, e.g. RandomLoadBalancer
-	LoadBalancer LoadBalancer
+	LoadBalancer loadbalance.Balancer
 	// How long would proxy wait for server response
 	HttpReadTimeout time.Duration
 	// How long would proxy try to dial server
@@ -53,21 +40,19 @@ type ProxySettings struct {
 // This is a reverse proxy, not meant to be created directly,
 // use NewReverseProxy function instead
 type ReverseProxy struct {
-	// Control server urls that decide what to do with the request
-	controlServers []*url.URL
-	// Filters upstreams based on the throtting data
-	throttler *Throttler
-	// Sorts upstreams, control servers in accrordance to it's internal
-	// algorithm
-	loadBalancer LoadBalancer
+	// Controller decides what to do with the request
+	controller control.Controller
+	// Load balancer algorightm implementation
+	loadBalancer loadbalance.Balancer
 	// Customized transport with dial and read timeouts set
 	httpTransport *http.Transport
 	// Client that uses customized transport
 	httpClient *http.Client
+	// Rate limiter
+	rateLimiter ratelimit.RateLimiter
 }
 
-// Standard dial and read timeouts, can be overriden when supplying
-// proxy settings
+// Standard dial and read timeouts, can be overriden when supplying proxy settings
 const (
 	DefaultHttpReadTimeout = time.Duration(10) * time.Second
 	DefaultHttpDialTimeout = time.Duration(10) * time.Second
@@ -87,7 +72,7 @@ var hopHeaders = []string{
 	"Upgrade",
 }
 
-// Creates reverse proxy that acts like http server
+// Creates reverse proxy that acts like http server.
 func NewReverseProxy(s *ProxySettings) (*ReverseProxy, error) {
 	s, err := validateProxySettings(s)
 	if err != nil {
@@ -101,157 +86,211 @@ func NewReverseProxy(s *ProxySettings) (*ReverseProxy, error) {
 		ResponseHeaderTimeout: s.HttpReadTimeout,
 	}
 
+	var rateLimiter ratelimit.RateLimiter
+	if s.ThrottlerBackend != nil {
+		rateLimiter = &ratelimit.BasicRateLimiter{Backend: s.ThrottlerBackend}
+	}
+
 	p := &ReverseProxy{
-		controlServers: make([]*url.URL, len(s.ControlServers)),
-		throttler:      NewThrottler(s.ThrottlerBackend),
-		loadBalancer:   s.LoadBalancer,
-		httpTransport:  transport,
+		controller:    s.Controller,
+		loadBalancer:  s.LoadBalancer,
+		httpTransport: transport,
+		rateLimiter:   rateLimiter,
 		httpClient: &http.Client{
 			Transport: transport,
 		},
 	}
-
-	for i, str := range s.ControlServers {
-		u, err := url.Parse(str)
-		if err != nil {
-			return nil, err
-		}
-		p.controlServers[i] = u
-	}
 	return p, nil
 }
 
+// Vulcan implements Getter interface that is used by controllers to issue concurrent get requests with failover
+func (p *ReverseProxy) Get(w http.ResponseWriter, hosts []string, query client.MultiDict, auth *netutils.BasicAuth) error {
+	req, err := http.NewRequest("GET", "http://localhost", nil)
+	if err != nil {
+		return err
+	}
+	if query != nil {
+		parameters := url.Values{}
+		for key, values := range query {
+			for i, _ := range values {
+				parameters.Add(key, values[i])
+			}
+		}
+		req.URL.RawQuery = parameters.Encode()
+	}
+
+	if auth != nil {
+		req.SetBasicAuth(auth.Username, auth.Password)
+	}
+
+	upstreams, err := command.NewUpstreamsFromUrls(hosts)
+	if err != nil {
+		return err
+	}
+	req.Body = &Buffer{&bytes.Reader{}}
+
+	cmd := &command.Forward{
+		Failover:  &command.Failover{Active: true},
+		Upstreams: upstreams,
+	}
+	endpoints := command.EndpointsFromUpstreams(cmd.Upstreams)
+	_, err = p.proxyRequest(w, req, cmd, endpoints)
+	return err
+}
+
+// Main request handler, accepts requests, round trips it to the upstream
+// proxies back the response.
 func (p *ReverseProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	glog.Infof("Serving Request %s %s", req.Method, req.RequestURI)
 
-	controlServers, err := p.loadBalancer.sortedUrls(p.controlServers)
+	// Ask controller for instructions
+	cmdI, err := p.controller.GetInstructions(req)
 	if err != nil {
+		glog.Errorf("Error getting instructions: %s", err)
 		p.replyError(err, w, req)
 		return
 	}
 
-	// Ask control server for instructions
-	instructions, err := getInstructions(p.httpClient, controlServers, req)
-	if err != nil {
-		p.replyError(err, w, req)
+	switch cmd := cmdI.(type) {
+	case *command.Reply:
+		// reply command provides the exact response
+		// for the client. Proxy responds and hangs up.
+		glog.Infof("Got Reply command: %v", cmd)
+		p.replyCommand(cmd, w, req)
+		return
+	case *command.Forward:
+		// Forward command contains list of upstreams
+		// instructions for the failover and request modification
+		glog.Infof("Got Forward command %v", cmd)
+		// Get upstreams ready to process the request
+		retrySeconds, err := p.rateLimit(cmd)
+		if err != nil {
+			p.replyError(err, w, req)
+			return
+		}
+		if retrySeconds != 0 {
+			p.replyError(&command.RetryError{Seconds: retrySeconds}, w, req)
+			return
+		}
+		endpoints := command.EndpointsFromUpstreams(cmd.Upstreams)
+		requestBytes, err := p.proxyRequest(w, req, cmd, endpoints)
+		if err != nil {
+			glog.Error("Failed to proxy to all upstreams:", err)
+			p.replyError(&command.AllUpstreamsDownError{}, w, req)
+			return
+		}
+		p.updateRates(requestBytes, cmd)
 		return
 	}
+	p.replyError(fmt.Errorf("Internal logic error"), w, req)
+}
 
-	// Select an upstream
-	upstreams, err := p.getUpstreams(instructions)
+func (p *ReverseProxy) rateLimit(cmd *command.Forward) (int, error) {
+	if p.rateLimiter == nil || cmd.Rates == nil {
+		return 0, nil
+	}
+	retrySeconds, err := p.rateLimiter.GetRetrySeconds(cmd.Rates)
+	// Vulcan prefers to proxy the request in case of rate limiter failure
+	// versus hanging up with the error as it's less evil.
 	if err != nil {
-		p.replyError(err, w, req)
+		glog.Errorf("RateLimiter get stats failure: %s, ignoring error", err)
+		return 0, nil
+	}
+	return retrySeconds, err
+}
+
+func (p *ReverseProxy) updateRates(requestBytes int, cmd *command.Forward) {
+	if p.rateLimiter == nil || cmd.Rates == nil {
 		return
 	}
-
-	// Proxy request to the selected upstream
-	upstream, err := p.proxyRequest(w, req, instructions, upstreams)
+	err := p.rateLimiter.UpdateStats(int64(requestBytes), cmd.Rates)
 	if err != nil {
-		glog.Error("Failed to proxy to the upstreams:", err)
-		p.replyError(err, w, req)
-		return
-	}
-
-	// Update usage stats
-	err = p.throttler.updateStats(instructions.Tokens, upstream)
-	if err != nil {
-		glog.Error("Failed to update stats:", err)
+		glog.Errorf("RateLimiter update stats failire: %s, ignoring error", err)
 	}
 }
 
-func NewProxyInstructions(
-	failover bool,
-	tokens []*Token,
-	upstreams []*Upstream,
-	headers http.Header) (*ProxyInstructions, error) {
-
-	if len(upstreams) <= 0 {
-		return nil, fmt.Errorf("At least one upstream is required")
-	}
-
-	return &ProxyInstructions{
-		Failover:  failover,
-		Tokens:    tokens,
-		Upstreams: upstreams,
-		Headers:   headers}, nil
-}
-
-func (p *ReverseProxy) getUpstreams(instructions *ProxyInstructions) ([]*Upstream, error) {
-	// Throttle the requests to find available upstreams
-	// We may fall back to all upstreams if throttler is down
-	// If there are no available upstreams, we reject the request
-	upstreamStats, retrySeconds, err := p.throttler.throttle(instructions)
-	if err != nil {
-		// throtller is down, we are falling back
-		// so we won't loose the request
-		glog.Error("Throtter is down, falling back to random shuffling")
-		return p.loadBalancer.sortedUpstreams(instructions.Upstreams)
-	} else if len(upstreamStats) == 0 {
-		// No available upstreams
-		return nil, TooManyRequestsError(retrySeconds)
-	} else {
-		// Choose an upstream based on the usage stats
-		return p.loadBalancer.sortedUpstreamsByStats(upstreamStats)
-	}
-}
-
-// We need this struct to add a Close method
-// and comply with io.ReadCloser
+// We need this struct to add a Close method and comply with io.ReadCloser
 type Buffer struct {
 	*bytes.Reader
 }
 
 func (*Buffer) Close() error {
-	// Does nothing, created to comply with
-	// io.ReadCloser requirements
+	// Does nothing, created to comply with io.ReadCloser requirements
 	return nil
 }
 
-func (p *ReverseProxy) proxyRequest(w http.ResponseWriter, req *http.Request, instructions *ProxyInstructions, upstreams []*Upstream) (*Upstream, error) {
-
-	if !instructions.Failover {
-		upstream := upstreams[0]
-		glog.Infof("Without failover, proxy to upstream: %s", upstream)
-		err := p.proxyToUpstream(w, req, instructions, upstream)
-		if err != nil {
-			glog.Errorf("Upstream error: %s", err)
-			return nil, NewHttpError(http.StatusBadGateway)
-		}
-		return upstream, nil
+func (p *ReverseProxy) nextEndpoint(endpoints []loadbalance.Endpoint) (*command.Endpoint, error) {
+	// Get first endpoint
+	pendpoint, err := p.loadBalancer.NextEndpoint(endpoints)
+	if err != nil {
+		glog.Errorf("Loadbalancer failure: %s", err)
+		return nil, err
 	}
+	endpoint, ok := pendpoint.(*command.Endpoint)
+	if !ok {
+		return nil, fmt.Errorf("Failed to convert types! Unknown type: %v", pendpoint)
+	}
+	return endpoint, nil
+}
+
+// Round trips the request to one of the upstreams, returns the streamed
+// request body length in bytes and the upstream reply.
+func (p *ReverseProxy) proxyRequest(
+	w http.ResponseWriter, req *http.Request,
+	cmd *command.Forward,
+	endpoints []loadbalance.Endpoint) (int, error) {
 
 	// We are allowed to fallback in case of upstream failure,
-	// so let us record the request body so we can replay
-	// it on errors actually
+	// record the request body so we can replay it on errors.
 	buffer, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		glog.Errorf("Request read error %s", err)
-		return nil, NewHttpError(http.StatusBadRequest)
+		return 0, netutils.NewHttpError(http.StatusBadRequest)
 	}
+
 	reader := &Buffer{bytes.NewReader(buffer)}
+	requestLength := reader.Len()
 	req.Body = reader
 
-	for _, upstream := range upstreams {
+	for i := 0; i < len(endpoints); i++ {
 		_, err := reader.Seek(0, 0)
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
-		glog.Infof("With failover, proxy to upstream: %s", upstream)
-		err = p.proxyToUpstream(w, req, instructions, upstream)
+		endpoint, err := p.nextEndpoint(endpoints)
 		if err != nil {
-			glog.Errorf("Upstream %s error, falling back to another", upstream)
+			glog.Errorf("Load Balancer failure: %s", err)
+			return 0, err
+		}
+		glog.Infof("With failover, proxy to upstream: %s", endpoint.Upstream)
+		err = p.proxyToUpstream(w, req, cmd, endpoint.Upstream)
+		if err != nil {
+			if cmd.Failover == nil || !cmd.Failover.Active {
+				return 0, err
+			}
+			glog.Errorf("Upstream: %s error: %s, falling back to another", endpoint.Upstream, err)
+			// Mark the endpoint as inactive for the next round of the load balance iteration
+			endpoint.Active = false
 		} else {
-			return upstream, nil
+			return 0, nil
 		}
 	}
-
 	glog.Errorf("All upstreams failed!")
-	return nil, NewHttpError(http.StatusBadGateway)
+	return requestLength, netutils.NewHttpError(http.StatusBadGateway)
 }
 
-func (p *ReverseProxy) proxyToUpstream(w http.ResponseWriter, req *http.Request, instructions *ProxyInstructions, upstream *Upstream) error {
+// Proxy the request to the given upstream, in case if upstream is down
+// or failover code sequence has been recorded as the reply, return the error.
+// Failover sequence - is a special response code from the upstream that indicates
+// that upstream is shutting down and is not willing to accept new requests.
+func (p *ReverseProxy) proxyToUpstream(
+	w http.ResponseWriter,
+	req *http.Request,
+	cmd *command.Forward,
+	upstream *command.Upstream) error {
+
 	// Rewrites the request: adds headers, changes urls etc.
-	outReq := rewriteRequest(req, instructions, upstream)
+	outReq := rewriteRequest(req, cmd, upstream)
 
 	// Forward the reuest and mirror the response
 	res, err := p.httpTransport.RoundTrip(outReq)
@@ -259,20 +298,36 @@ func (p *ReverseProxy) proxyToUpstream(w http.ResponseWriter, req *http.Request,
 		return err
 	}
 	defer res.Body.Close()
-	copyHeaders(w.Header(), res.Header)
 
+	// In some cases upstreams may return special error codes that indicate that instead
+	// of proxying the response of the upstream to the client we should initiate a failover
+	if cmd.Failover != nil && len(cmd.Failover.Codes) != 0 {
+		for _, code := range cmd.Failover.Codes {
+			if res.StatusCode == code {
+				glog.Errorf("Upstream %s initiated failover with status code %d", upstream, code)
+				return fmt.Errorf("Upstream %s initiated failover with status code %d", upstream, code)
+			}
+		}
+	}
+
+	netutils.CopyHeaders(w.Header(), res.Header)
 	w.WriteHeader(res.StatusCode)
 	io.Copy(w, res.Body)
 	return nil
 }
 
-func rewriteRequest(req *http.Request, instructions *ProxyInstructions, upstream *Upstream) *http.Request {
+// This function alters the original request - adds/removes headers, removes hop headers,
+// changes the request path.
+func rewriteRequest(req *http.Request, cmd *command.Forward, upstream *command.Upstream) *http.Request {
 	outReq := new(http.Request)
 	*outReq = *req // includes shallow copies of maps, but we handle this below
 
-	outReq.URL.Scheme = upstream.Url.Scheme
-	outReq.URL.Host = upstream.Url.Host
-	outReq.URL.Path = upstream.Url.Path
+	outReq.URL.Scheme = upstream.Scheme
+	outReq.URL.Host = fmt.Sprintf("%s:%d", upstream.Host, upstream.Port)
+	if len(cmd.RewritePath) != 0 {
+		outReq.URL.Path = cmd.RewritePath
+	}
+
 	outReq.URL.RawQuery = req.URL.RawQuery
 
 	outReq.Proto = "HTTP/1.1"
@@ -280,54 +335,72 @@ func rewriteRequest(req *http.Request, instructions *ProxyInstructions, upstream
 	outReq.ProtoMinor = 1
 	outReq.Close = false
 
+	glog.Infof("Proxying request to: %v", outReq)
+
 	// We copy headers only if we alter the original request
 	// headers, otherwise we use the shallow copy
-	if len(instructions.Headers) != 0 || len(upstream.Headers) != 0 || hasHeaders(hopHeaders, req.Header) {
+	if len(cmd.AddHeaders) != 0 ||
+		len(cmd.RemoveHeaders) != 0 ||
+		netutils.HasHeaders(hopHeaders, req.Header) {
 		outReq.Header = make(http.Header)
-		copyHeaders(outReq.Header, req.Header)
+		netutils.CopyHeaders(outReq.Header, req.Header)
 	}
 
-	// Add upstream headers to the request
-	if len(upstream.Headers) != 0 {
-		glog.Info("Proxying Upstream headers:", upstream.Headers)
-		copyHeaders(outReq.Header, upstream.Headers)
+	if len(cmd.RemoveHeaders) != 0 {
+		netutils.RemoveHeaders(cmd.RemoveHeaders, outReq.Header)
 	}
 
 	// Add generic instructions headers to the request
-	if len(instructions.Headers) != 0 {
-		glog.Info("Proxying instructions headers:", instructions.Headers)
-		copyHeaders(outReq.Header, instructions.Headers)
+	if len(cmd.AddHeaders) != 0 {
+		glog.Info("Proxying instructions headers:", cmd.AddHeaders)
+		netutils.CopyHeaders(outReq.Header, cmd.AddHeaders)
 	}
 
 	// Remove hop-by-hop headers to the backend.  Especially
 	// important is "Connection" because we want a persistent
 	// connection, regardless of what the client sent to us.
-	removeHeaders(hopHeaders, outReq.Header)
+	netutils.RemoveHeaders(hopHeaders, outReq.Header)
 	return outReq
 }
 
 // Helper function to reply with http errors
 func (p *ReverseProxy) replyError(err error, w http.ResponseWriter, req *http.Request) {
-	httpErr, isHttp := err.(*HttpError)
-	if !isHttp {
-		httpErr = NewHttpError(http.StatusInternalServerError)
+	httpResponse, err := p.controller.ConvertError(req, err)
+	if err != nil {
+		glog.Errorf("Error converter failed: %s", err)
+		httpResponse = netutils.NewHttpError(http.StatusInternalServerError)
 	}
-
 	// Discard the request body, so that clients can actually receive the response
 	// Otherwise they can only see lost connection
 	// TODO: actually check this
 	io.Copy(ioutil.Discard, req.Body)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpErr.StatusCode)
-	w.Write(httpErr.Body)
+	w.WriteHeader(httpResponse.StatusCode)
+	w.Write(httpResponse.Body)
+}
+
+// Helper function to reply with a response specified in the reply command
+func (p *ReverseProxy) replyCommand(cmd *command.Reply, w http.ResponseWriter, req *http.Request) {
+	// Discard the request body, so that clients can actually receive the response
+	// Otherwise they can only see lost connection.
+	// TODO: actually check this in tests
+	io.Copy(ioutil.Discard, req.Body)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(cmd.Code)
+	body, err := json.Marshal(cmd.Body)
+	if err != nil {
+		glog.Errorf("Failed to serialize body: %s", err)
+		body = []byte("Internal system error")
+	}
+	w.Write(body)
 }
 
 func validateProxySettings(s *ProxySettings) (*ProxySettings, error) {
 	if s == nil {
 		return nil, fmt.Errorf("Provide proxy settings")
 	}
-	if len(s.ControlServers) == 0 {
-		return nil, fmt.Errorf("Supply at least one control server")
+	if s.Controller == nil {
+		return nil, fmt.Errorf("Controller can not be nil")
 	}
 	if s.ThrottlerBackend == nil {
 		return nil, fmt.Errorf("Backend can not be nil")

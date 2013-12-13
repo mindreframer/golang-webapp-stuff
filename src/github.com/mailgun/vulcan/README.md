@@ -1,170 +1,76 @@
 [![Build Status](https://travis-ci.org/mailgun/vulcan.png)](https://travis-ci.org/mailgun/vulcan)
+[![Build Status](https://drone.io/github.com/mailgun/vulcan/status.png)](https://drone.io/github.com/mailgun/vulcan/latest)
+[![Coverage Status](https://coveralls.io/repos/mailgun/vulcan/badge.png?branch=master)](https://coveralls.io/r/mailgun/vulcan?branch=master)
 
-Vulcan
-------
+Status
+=======
+Don't use it in production, early adopters and hackers are welcome
 
-HTTP reverse proxy that supports authorization, rate limiting, load balancing and failover.
 
-Rationale
----------
+Proxy for HTTP services
+-----------------------
 
-* Request routing and throttling should be dynamic and programmatic task.
-* Proxy should take the pain out of the services failover, authentication, letting services behind it to be simple.
+Vulcan is a proxy built for APi's specific needs that are usually different from website's needs. It is a proxy that you program in JavaScript.
 
-Request flow
-------------
+```javascript
+function handle(request){
+    return {upstreams: ["http://localhost:5000", "http://localhost:5001"]}
+}
+```
 
-* Client request arrives to the Vulcan.
-* Vulcan extracts request information and asks control server what to do with the request.
-* Vulcan denies or throttles and routes the request according to the instructions from the control server.
-* If the upstream fails, Vulcan can optionally forward the request to the next upstream.
+How slow can your proxy be?
+---------------------------
+One wants proxies to be fast, but in case of services proxy is rarely a bottleneck, whereas DB and filesystem are.
+Vulcan supports rate limiting using memory, Cassandra or Redis backends, so your service can introduce proper account-specific rates and expectations right from the start.
 
-Authorization
+```javascript
+function handle(request){
+    return {
+        failover: true,
+        upstreams: ["http://localhost:5000", "http://localhost:5001"],
+        rates: {request.ip: ["10 requests/second", "1000 KB/second"]}
+    }
+}
+```
+
+Discover FTW!
 -------------
 
-Vulcan sends the following request info to the control server:
-
-|Name    |Descripton                |
-|--------|--------------------------|
-|username| HTTP auth username       |
-|password| HTTP auth password       |
-|protocol| protocol (SMTP/HTTP)     |
-|url     | original request url     |
-|headers | (JSON encoded dictionary)|
-|length  | request size in bytes    |
-
-
-Control server can deny the request by responding with non 200 response code. 
-In this case the exact control server response will be proxied to the client.
-Otherwise, control server replies with JSON understood by the proxy. See Routing section for details.
-
-Routing & Throttling
---------------------
-
-If the request is good to go, control server replies with json in the following format:
+Storing upstreams in files is ok up to a certain extent. On the other hand, keeping upstreams in a discovery service simplifies deployment and configuration management. Vulcan supports Etcd or Zookeeper:
 
 ```javascript
-{
-        "tokens": [
-            {
-                "id": "hello",
-                "rates": [
-                    {"increment": 1, "value": 10, "period": "minute"}
-                ]
-            }
-       ],
-       "upstreams": [
-            {
-                "url": "http://localhost:5000/upstream",
-                'rates': [
-                    {"increment": 1, "value": 2, "period": "minute"}
-                 ]
-            },
-            {
-                "url": "http://localhost:5000/upstream2",
-                "rates": [
-                    {"increment": 1, "value": 4, "period": "minute"}
-                 ]
-            }
-       ])
+function handle(request){
+    return {
+        upstreams: discover("/upstreams"),
+        rates: {request.ip: ["10 requests/second", "1000 KB/second"]}
+    }
 }
-
 ```
 
-* In this example all requests will be throttled by the same token 'hello', with maximum 10 hits per minute total.
-* The request can be routed to one of the two upstreams, the first upstream allows max 2 requests per minute, the second one allows 4 requests per minute.
+Caching and Auth
+-----------------
 
-In case if all upstreams are busy or tokens rates are not allowing the request to proceed, Vulcan replies with json-encoded response:
+Auth is hard and you don't want every endpoint to implement auth. It's better to implement auth endpoint once, and make proxy deal with it. As a bonus you can cache results using memory, Redis or Cassandra, reducing load on the databases holding account creds.
 
 ```javascript
-{
-        "retry-seconds": 20,
-        ...
+function handle(request){
+    response = get(discover("/auth-endpoints"), {auth: request.auth}, {cache: true})
+    if(!response.code == 200) {
+        return response
+    }
+    return {
+        upstreams: discover("/upstreams"),
+        rates: {request.ip: ["10 requests/second", "1000 KB/second"]}
+    }
 }
-
 ```
 
-Vulcan tells client when the next request can succeed, so clients can embrace this data and reschedule the request in 20 seconds. Note that this
-is an estimate and does not guarantee that request will succeed, it guarantees that request would not succeed if executed before waiting given amount
-of seconds. It allows not to waste resources and keep trying.
-
-Failover
---------
-
-* In case if control server fails, vulcan automatically queries the next available server.
-* In case of upstream being slow or unresponsive, Vulcan can retry the request with the next upstream. 
-
-This option turned on by the failover flag in the control response:
+And many more advanced features you'd need when writing APIs, like Metrics and Failure detection. Read on!
 
 
-```javascript
-{
-        "failover": true,
-        ...
-}
+__Development setup__
 
-```
-
-* In this case Vulcan will retry the request on the next upstream selected by the load balancer. 
-
-__Note__
-
-Failover allows fast deployments of the underlying applications, however it requires that the request would be idempotent, i.e. can be safely retried several times. Read more about the term here: http://stackoverflow.com/questions/1077412/what-is-an-idempotent-operation
-
-E.g. most of the GET requests are idempotent as they don't change the app state, however you should be more careful with POST requests,
-as they may do some damage if repeated.
-
-Failovers can also lead to the cascading failures. Imagine some bad request killing your service, in this case failover will kill all upstreams! That's why make sure you return limited amount of upstreams with the control response in case of failover to limit the potential damage.
-
-Control server example
--------------------
-
-```python
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-@app.route('/auth')
-def auth():
-    print request.args
-    return jsonify(
-        tokens=[
-            {
-                'id': 'hello',
-                'rates': [
-                    {'increment': 1, 'value': 10, 'period': 'minute'}
-                ]
-            }
-       ],
-       upstreams=[
-            {
-                'url': 'http://localhost:5000/upstream',
-                'rates': [
-                    {'increment': 1, 'value': 2, 'period': 'minute'}
-                 ]
-            },
-            {
-                'url': 'http://localhost:5000/upstream2',
-                'rates': [
-                    {'increment': 1, 'value': 4, 'period': 'minute'}
-                 ]
-            }
-       ])
-
-@app.route('/upstream')
-def upstream():
-    return 'Upstream: Hello World!'
-
-@app.route('/upstream2')
-def upstream2():
-    return 'Upstream2: Hello World!'
-
-if __name__ == '__main__':
-    app.run()
-```
-
-Installation
-------------
+Mailing list: https://groups.google.com/forum/#!forum/vulcan-proxy
 
 __Install go__
 
@@ -172,14 +78,14 @@ __Install go__
 
 __Get vulcan and install deps__
  
-```bash 
+```bash
+# set your GOPATH to something reasonable.
+export GOPATH=~/projects/vulcan
+cd $GOPATH
 go get github.com/mailgun/vulcan
 
-go get -v github.com/axw/gocov # go test coverage
-go install github.com/axw/gocov/gocov # go test coverage 
-go get -v github.com/golang/glog # go logging system
-go get -v launchpad.net/gocheck # go advanced testing framework
-go get -v github.com/mailgun/gocql # go cassandra client
+make -C ./src/github.com/mailgun/vulcan deps
+cd ./src/github.com/mailgun/vulcan
 ```
 
 __Run in devmode__
@@ -190,27 +96,30 @@ make run
 
 __Cassandra__
 
-If you want to use cassandra for throttling (which is a good idea), you'll need:
+Cassandra-based throttling is a generally good idea, as it provides reliable distributed
+counters that can be shared between multiple instances of vulcan. Vulcan provides auto garbage collection
+and cleanup of the counters.
 
-* cassandra (Tested on versions >= 1.2.5)
-* create keyspace with the following table
-
-```sql
-CREATE TABLE hits (
-      hit text PRIMARY KEY,
-      value counter
-    ) WITH COMPACT STORAGE;
-```
+Tested on versions >= 1.2.5
 
 Usage
 -------
+
 ```bash
-vulcan -stderrthreshold=INFO \      # log info, from glog
-       -logtostderr=true \          # log to stderror
+vulcan \
+       -h=0.0.0.0\                  # interface to bind to
+       -p=4000\                     # port to listen on
        -c=http://localhost:5000 \   # control server url#1
        -c=http://localhost:5001 \   # control server url#2, for redundancy
+       -stderrthreshold=INFO \      # log info, from glog
+       -logtostderr=true \          # log to stderror
+       -logcleanup=24h \            # clean up logs every 24 hours
+       -log_dir=/var/log/           # keep log files in this folder
+       -pid=/var/run/vulcan.pid     # create pid file
+       -lb=roundrobin \             # use round robin load balancer
        -b=cassandra \               # use cassandra for throttling
-       -lb=random \                 # use random load balancer
+       -cscleanup=true \            # cleanup old counters
+       -cscleanuptime=19:05 \       # cleanup counters 19:05 UTC every day
        -csnode=localhost  \         # cassandra node, can be multiple
        -cskeyspace=vulcan_dev       # cassandra keyspace
 ```
