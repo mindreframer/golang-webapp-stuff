@@ -70,6 +70,10 @@
       The easiest way to create web applications with Go
        272 commits, last change: 2013-06-30 12:54:56, 1,456 stars, 221 forks
 
+    insionng/toropress:
+      toropress is a cms system of written in golang
+       56 commits, last change: 2013-05-23 12:15:15, 46 stars, 18 forks
+
     jimmykuu/gopher:
       Golang-China(golangtc.com) Website
        157 commits, last change: 2013-09-28 07:57:10, 149 stars, 52 forks
@@ -113,6 +117,10 @@
     ku-ovdp/api:
       Open Voice Data Project API
        67 commits, last change: , 0 stars, 0 forks
+
+    lunny/xorm:
+      A Simple and Powerful ORM for Go.
+       245 commits, last change: 2013-12-12 19:15:54, 123 stars, 24 forks
 
     mailgun/vulcan:
       Rate limiting reverse proxy
@@ -173,6 +181,10 @@
     tanema/mgorx:
       A mgo revel extention
        14 commits, last change: , 0 stars, 0 forks
+
+    tus/tusd:
+      The official reference implementation of the tus resumable upload protocol.
+       148 commits, last change: 2013-12-12 21:02:42, 222 stars, 19 forks
 
     ugorji/go:
       Open-Source Go Code. msgpack.org[Go]
