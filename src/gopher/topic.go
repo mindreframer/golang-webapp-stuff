@@ -6,14 +6,15 @@ package gopher
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/jimmykuu/wtforms"
 	"html/template"
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/jimmykuu/wtforms"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 func topicsHandler(w http.ResponseWriter, r *http.Request, conditions bson.M, sort string, url string, subActive string) {
@@ -368,7 +369,7 @@ func deleteTopicHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 删除Topic记录
-	c = DB.C("topics")
+	c = DB.C("contents")
 	c.Remove(bson.M{"_id": topicId})
 
 	http.Redirect(w, r, "/", http.StatusFound)

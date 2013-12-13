@@ -5,11 +5,12 @@
 package gopher
 
 import (
+	"html/template"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	"github.com/jimmykuu/wtforms"
-	"html/template"
 	"labix.org/v2/mgo/bson"
-	"net/http"
 )
 
 // 管理页面的子菜单
@@ -19,6 +20,7 @@ const ADMIN_NAV = template.HTML(`<div class="col-md-3">
 		<li><a href="/admin/site_categories"><i class="icon-chevron-right"></i> 站点分类管理</a></li>
 		<li><a href="/admin/article_categories"><i class="icon-chevron-right"></i> 文章分类管理</a></li>
 		<li><a href="/admin/package_categories"><i class="icon-chevron-right"></i> 包分类管理</a></li>
+        <li><a href="/admin/books"><i class="icon-chevron-right"></i> 图书管理</a></li>
 		<li><a href="/admin/users"><i class="icon-chevron-right"></i> 用户管理</a></li>
 		<li><a href="/admin/link_exchanges"><i class="icon-chevron-right"></i> 友情链接</a></li>
 		<li><a href="/admin/ads"><i class="icon-chevron-right"></i> 广告</a></li>
@@ -457,6 +459,7 @@ func adminListAdsHandler(w http.ResponseWriter, r *http.Request) {
 func adminNewAdHandler(w http.ResponseWriter, r *http.Request) {
 	choices := []wtforms.Choice{
 		wtforms.Choice{"frongpage", "首页"},
+		wtforms.Choice{"2cols", "2列宽度"},
 		wtforms.Choice{"3cols", "3列宽度"},
 		wtforms.Choice{"4cols", "4列宽度"},
 	}

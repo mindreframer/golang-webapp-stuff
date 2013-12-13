@@ -1,5 +1,545 @@
 [
     {
+        "version": "go1.2",
+        "date": "2013-12-01",
+        "files": [
+            {
+                "filename": "go1.2.darwin-386-osx10.6.pkg",
+                "summary": "go1.2 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.0 MB",
+                "sha1": "023860586c473f762d14be75f6ad32eed3150701",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-386-osx10.6.pkg"
+            }, {
+                "filename": "go1.2.darwin-386-osx10.6.tar.gz",
+                "summary": "go1.2 Mac OS X (x86 32-bit) tarball",
+                "size": "39.8 MB",
+                "sha1": "22bca55e0477c11a532e7f1e5c4ff1828b1cb0a0",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-386-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2.darwin-386-osx10.8.pkg",
+                "summary": "go1.2 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.5 MB",
+                "sha1": "cb08581720e1f19307895d75121605cab1471f08",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-386-osx10.8.pkg"
+            }, {
+                "filename": "go1.2.darwin-386-osx10.8.tar.gz",
+                "summary": "go1.2 Mac OS X (x86 32-bit) tarball",
+                "size": "40.3 MB",
+                "sha1": "d24cae107bbd4ae150fa41bef217ddc2e0cf0a39",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-386-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2.darwin-amd64-osx10.6.pkg",
+                "summary": "go1.2 Mac OS X (x86 64-bit) PKG installer",
+                "size": "51.9 MB",
+                "sha1": "e97e1f5976714fde36003cc9edfec42308cb3997",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-amd64-osx10.6.pkg"
+            }, {
+                "filename": "go1.2.darwin-amd64-osx10.6.tar.gz",
+                "summary": "go1.2 Mac OS X (x86 64-bit) tarball",
+                "size": "51.7 MB",
+                "sha1": "311a79a5ba8e258a4b17d941c0649bdae1741b13",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-amd64-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2.darwin-amd64-osx10.8.pkg",
+                "summary": "go1.2 Mac OS X (x86 64-bit) PKG installer",
+                "size": "52.4 MB",
+                "sha1": "7c1046f01be35183bbc93e85bcde6f5820330a5f",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-amd64-osx10.8.pkg"
+            }, {
+                "filename": "go1.2.darwin-amd64-osx10.8.tar.gz",
+                "summary": "go1.2 Mac OS X (x86 64-bit) tarball",
+                "size": "52.2 MB",
+                "sha1": "71604d32cfaaab31b72707ca82287313e4bbb4e0",
+                "url": "https://go.googlecode.com/files/go1.2.darwin-amd64-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2.freebsd-386.tar.gz",
+                "summary": "go1.2 FreeBSD (x86 32-bit) tarball",
+                "size": "39.9 MB",
+                "sha1": "1e87f725570b67c21e176f4f77c4e39e7545fb2a",
+                "url": "https://go.googlecode.com/files/go1.2.freebsd-386.tar.gz"
+            }, {
+                "filename": "go1.2.freebsd-amd64.tar.gz",
+                "summary": "go1.2 FreeBSD (x86 64-bit) tarball",
+                "size": "40.7 MB",
+                "sha1": "e77db02f5706ba31e45e385e51c13e4773c4d292",
+                "url": "https://go.googlecode.com/files/go1.2.freebsd-amd64.tar.gz"
+            }, {
+                "filename": "go1.2.linux-386.tar.gz",
+                "summary": "go1.2 Linux (x86 32-bit) tarball",
+                "size": "41.2 MB",
+                "sha1": "63d67f66b766817b9760d0972451a7ee8dc05a2d",
+                "url": "https://go.googlecode.com/files/go1.2.linux-386.tar.gz"
+            }, {
+                "filename": "go1.2.linux-amd64.tar.gz",
+                "summary": "go1.2 Linux (x86 64-bit) tarball",
+                "size": "53.4 MB",
+                "sha1": "664e5025eae91412a96a10f4ed1a8af6f0f32b7d",
+                "url": "https://go.googlecode.com/files/go1.2.linux-amd64.tar.gz"
+            }, {
+                "filename": "go1.2.src.tar.gz",
+                "summary": "go1.2 (source only)",
+                "size": "9.1 MB",
+                "sha1": "7dd2408d40471aeb30a9e0b502c6717b5bf383a5",
+                "url": "https://go.googlecode.com/files/go1.2.src.tar.gz"
+            }, {
+                "filename": "go1.2.windows-386.msi",
+                "summary": "go1.2 Windows (x86 32-bit) MSI installer",
+                "size": "33.6 MB",
+                "sha1": "51d0f7eb26f9aa97267b47c941053bd2c6c3969e",
+                "url": "https://go.googlecode.com/files/go1.2.windows-386.msi"
+            }, {
+                "filename": "go1.2.windows-386.zip",
+                "summary": "go1.2 Windows (x86 32-bit) ZIP archive",
+                "size": "41.2 MB",
+                "sha1": "23543124a1db2409bc12018c376f6e0eb8681f5f",
+                "url": "https://go.googlecode.com/files/go1.2.windows-386.zip"
+            }, {
+                "filename": "go1.2.windows-amd64.msi",
+                "summary": "go1.2 Windows (x86 64-bit) MSI installer",
+                "size": "42.9 MB",
+                "sha1": "5f5638d47d88786fa11db25b558a4cc7ea38a748",
+                "url": "https://go.googlecode.com/files/go1.2.windows-amd64.msi"
+            }, {
+                "filename": "go1.2.windows-amd64.zip",
+                "summary": "go1.2 Windows (x86 64-bit) ZIP archive",
+                "size": "54.5 MB",
+                "sha1": "3d48ddf918583c4ef0b2b817191b606959489a5b",
+                "url": "https://go.googlecode.com/files/go1.2.windows-amd64.zip"
+            }
+        ]
+    }, {
+        "version": "go1.2rc5",
+        "date": "2013-11-17",
+        "files": [
+            {
+                "filename": "go1.2rc5.darwin-386-osx10.6.pkg",
+                "summary": "go1.2rc5 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.0 MB",
+                "sha1": "75a3eeea075978767b4c02c415b75d1697da0309",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-386-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc5.darwin-386-osx10.6.tar.gz",
+                "summary": "go1.2rc5 Mac OS X (x86 32-bit) tarball",
+                "size": "39.8 MB",
+                "sha1": "b8989b67a0d924d4532719fe671679051df2d946",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-386-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc5.darwin-386-osx10.8.pkg",
+                "summary": "go1.2rc5 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.5 MB",
+                "sha1": "df4688fedc274d17c1377d6f6097146cc5a98763",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-386-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc5.darwin-386-osx10.8.tar.gz",
+                "summary": "go1.2rc5 Mac OS X (x86 32-bit) tarball",
+                "size": "40.3 MB",
+                "sha1": "dd4d78fdd7c2da306a205aeee945efb6105ee0a5",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-386-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc5.darwin-amd64-osx10.6.pkg",
+                "summary": "go1.2rc5 Mac OS X (x86 64-bit) PKG installer",
+                "size": "51.9 MB",
+                "sha1": "9d780fa066a96a7622b8d39b4a854c54ca6fef7d",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-amd64-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc5.darwin-amd64-osx10.6.tar.gz",
+                "summary": "go1.2rc5 Mac OS X (x86 64-bit) tarball",
+                "size": "51.6 MB",
+                "sha1": "cbc45de13309cd1d019381fc3fa441a32d3b5561",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-amd64-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc5.darwin-amd64-osx10.8.pkg",
+                "summary": "go1.2rc5 Mac OS X (x86 64-bit) PKG installer",
+                "size": "52.4 MB",
+                "sha1": "1ac75072c4f69d618526a6ba5af613cb60b5a083",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-amd64-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc5.darwin-amd64-osx10.8.tar.gz",
+                "summary": "go1.2rc5 Mac OS X (x86 64-bit) tarball",
+                "size": "52.2 MB",
+                "sha1": "cc21a45e20424977defe5140f4b6ea7a3d6557c7",
+                "url": "https://go.googlecode.com/files/go1.2rc5.darwin-amd64-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc5.freebsd-386.tar.gz",
+                "summary": "go1.2rc5 FreeBSD (x86 32-bit) tarball",
+                "size": "39.9 MB",
+                "sha1": "97c48db86a88d0787462064f38b3f58d59ee9945",
+                "url": "https://go.googlecode.com/files/go1.2rc5.freebsd-386.tar.gz"
+            }, {
+                "filename": "go1.2rc5.freebsd-amd64.tar.gz",
+                "summary": "go1.2rc5 FreeBSD (x86 64-bit) tarball",
+                "size": "40.7 MB",
+                "sha1": "2ef074cfd6b7b60660f5220071dab51bf769119e",
+                "url": "https://go.googlecode.com/files/go1.2rc5.freebsd-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc5.linux-386.tar.gz",
+                "summary": "go1.2rc5 Linux (x86 32-bit) tarball",
+                "size": "41.2 MB",
+                "sha1": "a31f1aac3fa638e37f045da0aedb08c69d0bbdee",
+                "url": "https://go.googlecode.com/files/go1.2rc5.linux-386.tar.gz"
+            }, {
+                "filename": "go1.2rc5.linux-amd64.tar.gz",
+                "summary": "go1.2rc5 Linux (x86 64-bit) tarball",
+                "size": "53.4 MB",
+                "sha1": "edccc7c01aa1607aa84889c9333e93b3957766d8",
+                "url": "https://go.googlecode.com/files/go1.2rc5.linux-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc5.src.tar.gz",
+                "summary": "go1.2rc5 (source only)",
+                "size": "9.1 MB",
+                "sha1": "f0cc813715d06a8e2febd580e126b7489b6a945d",
+                "url": "https://go.googlecode.com/files/go1.2rc5.src.tar.gz"
+            }, {
+                "filename": "go1.2rc5.windows-386.msi",
+                "summary": "go1.2rc5 Windows (x86 32-bit) MSI installer",
+                "size": "33.6 MB",
+                "sha1": "c8276dc3457299681453a74692b6945e2f32d269",
+                "url": "https://go.googlecode.com/files/go1.2rc5.windows-386.msi"
+            }, {
+                "filename": "go1.2rc5.windows-386.zip",
+                "summary": "go1.2rc5 Windows (x86 32-bit) ZIP archive",
+                "size": "41.2 MB",
+                "sha1": "ebafed269a959be24830a0d65c20caf33d5d5fc4",
+                "url": "https://go.googlecode.com/files/go1.2rc5.windows-386.zip"
+            }, {
+                "filename": "go1.2rc5.windows-amd64.msi",
+                "summary": "go1.2rc5 Windows (x86 64-bit) MSI installer",
+                "size": "42.9 MB",
+                "sha1": "ee8c099deac87376eab819f89dae900b9c5abeb4",
+                "url": "https://go.googlecode.com/files/go1.2rc5.windows-amd64.msi"
+            }, {
+                "filename": "go1.2rc5.windows-amd64.zip",
+                "summary": "go1.2rc5 Windows (x86 64-bit) ZIP archive",
+                "size": "54.5 MB",
+                "sha1": "3f0b094aeb57043c342059dff678bf6edd56eb83",
+                "url": "https://go.googlecode.com/files/go1.2rc5.windows-amd64.zip"
+            }
+        ]
+    }, {
+        "version": "go1.2rc4",
+        "date": "2013-11-12",
+        "files": [
+            {
+                "filename": "go1.2rc4.darwin-386-osx10.6.pkg",
+                "summary": "go1.2rc4 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.0 MB",
+                "sha1": "9d83ac937444c5146d320673d21f1afbf814461a",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-386-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc4.darwin-386-osx10.6.tar.gz",
+                "summary": "go1.2rc4 Mac OS X (x86 32-bit) tarball",
+                "size": "39.8 MB",
+                "sha1": "1bc11c3b61200cd69c60a2db282e7048607fcf90",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-386-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc4.darwin-386-osx10.8.pkg",
+                "summary": "go1.2rc4 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.5 MB",
+                "sha1": "a90906241f412822dcb0a7ce7000b957f2a24155",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-386-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc4.darwin-386-osx10.8.tar.gz",
+                "summary": "go1.2rc4 Mac OS X (x86 32-bit) tarball",
+                "size": "40.3 MB",
+                "sha1": "d340541aa445a4536d0d0410c6a76c54d935509f",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-386-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc4.darwin-amd64-osx10.6.pkg",
+                "summary": "go1.2rc4 Mac OS X (x86 64-bit) PKG installer",
+                "size": "51.9 MB",
+                "sha1": "c2ee748696fb75fcaad17766a261ac7336677adf",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-amd64-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc4.darwin-amd64-osx10.6.tar.gz",
+                "summary": "go1.2rc4 Mac OS X (x86 64-bit) tarball",
+                "size": "51.6 MB",
+                "sha1": "ea48c20c73d09226ccf64bf74f74f8afd5dbb2a1",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-amd64-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc4.darwin-amd64-osx10.8.pkg",
+                "summary": "go1.2rc4 Mac OS X (x86 64-bit) PKG installer",
+                "size": "52.4 MB",
+                "sha1": "e17a4fb55687ae87d7af90054179a67e25073759",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-amd64-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc4.darwin-amd64-osx10.8.tar.gz",
+                "summary": "go1.2rc4 Mac OS X (x86 64-bit) tarball",
+                "size": "52.2 MB",
+                "sha1": "8e445a32797fd6b0c8ee65c1d99830d452bef796",
+                "url": "https://go.googlecode.com/files/go1.2rc4.darwin-amd64-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc4.freebsd-386.tar.gz",
+                "summary": "go1.2rc4 FreeBSD (x86 32-bit) tarball",
+                "size": "39.9 MB",
+                "sha1": "43b27ac4b011ddd5e65b0a84f6520a60ca72bb8e",
+                "url": "https://go.googlecode.com/files/go1.2rc4.freebsd-386.tar.gz"
+            }, {
+                "filename": "go1.2rc4.freebsd-amd64.tar.gz",
+                "summary": "go1.2rc4 FreeBSD (x86 64-bit) tarball",
+                "size": "40.7 MB",
+                "sha1": "2b64676fbab5dc10e6e545b267e75e6a38e3f62a",
+                "url": "https://go.googlecode.com/files/go1.2rc4.freebsd-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc4.linux-386.tar.gz",
+                "summary": "go1.2rc4 Linux (x86 32-bit) tarball",
+                "size": "41.2 MB",
+                "sha1": "9464025e381e4c3cfe03fe2cf8beeb1428ba83bd",
+                "url": "https://go.googlecode.com/files/go1.2rc4.linux-386.tar.gz"
+            }, {
+                "filename": "go1.2rc4.linux-amd64.tar.gz",
+                "summary": "go1.2rc4 Linux (x86 64-bit) tarball",
+                "size": "53.4 MB",
+                "sha1": "46d41ad40c48d93cc523b362458b9a34cd8fea0d",
+                "url": "https://go.googlecode.com/files/go1.2rc4.linux-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc4.src.tar.gz",
+                "summary": "go1.2rc4 (source only)",
+                "size": "9.1 MB",
+                "sha1": "a1782aef715875119e04ebd3f101708e3b6aa866",
+                "url": "https://go.googlecode.com/files/go1.2rc4.src.tar.gz"
+            }, {
+                "filename": "go1.2rc4.windows-386.msi",
+                "summary": "go1.2rc4 Windows (x86 32-bit) MSI installer",
+                "size": "33.6 MB",
+                "sha1": "96c95acea1080498f1bf884f98d2eb5b4378d303",
+                "url": "https://go.googlecode.com/files/go1.2rc4.windows-386.msi"
+            }, {
+                "filename": "go1.2rc4.windows-386.zip",
+                "summary": "go1.2rc4 Windows (x86 32-bit) ZIP archive",
+                "size": "41.2 MB",
+                "sha1": "83a3672a44990acae59f73ae235d0ece8cf5e48b",
+                "url": "https://go.googlecode.com/files/go1.2rc4.windows-386.zip"
+            }, {
+                "filename": "go1.2rc4.windows-amd64.msi",
+                "summary": "go1.2rc4 Windows (x86 64-bit) MSI installer",
+                "size": "42.9 MB",
+                "sha1": "8c76b8954a3e12851fdc1d5365ed4b32e7516c52",
+                "url": "https://go.googlecode.com/files/go1.2rc4.windows-amd64.msi"
+            }, {
+                "filename": "go1.2rc4.windows-amd64.zip",
+                "summary": "go1.2rc4 Windows (x86 64-bit) ZIP archive",
+                "size": "54.5 MB",
+                "sha1": "983e0cade2a0c738551eddc496dbab0c44d03d26",
+                "url": "https://go.googlecode.com/files/go1.2rc4.windows-amd64.zip"
+            }
+        ]
+    }, {
+        "version": "go1.2rc3",
+        "date": "2013-10-31",
+        "files": [
+            {
+                "filename": "go1.2rc3.darwin-386-osx10.6.pkg",
+                "summary": "go1.2rc3 Mac OS X (x86 32-bit) PKG installer",
+                "size": "39.9 MB",
+                "sha1": "dd09ea7c44af0d41f47c9c345ddeb8dd00d909ed",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-386-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc3.darwin-386-osx10.6.tar.gz",
+                "summary": "go1.2rc3 Mac OS X (x86 32-bit) tarball",
+                "size": "39.7 MB",
+                "sha1": "b8e41a894fd5bdb5fbf2548801ad22809d7cc9cc",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-386-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc3.darwin-386-osx10.8.pkg",
+                "summary": "go1.2rc3 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.4 MB",
+                "sha1": "ed166d1a60e4b63a5a5fa51b87b66aca996335ad",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-386-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc3.darwin-386-osx10.8.tar.gz",
+                "summary": "go1.2rc3 Mac OS X (x86 32-bit) tarball",
+                "size": "40.2 MB",
+                "sha1": "0cd124f8d1f799166bdea0006fd5f5501c8fbe3c",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-386-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc3.darwin-amd64-osx10.6.pkg",
+                "summary": "go1.2rc3 Mac OS X (x86 64-bit) PKG installer",
+                "size": "51.8 MB",
+                "sha1": "08b1bd8dc226e54d45a4b1652976cda4025c4bd8",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-amd64-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc3.darwin-amd64-osx10.6.tar.gz",
+                "summary": "go1.2rc3 Mac OS X (x86 64-bit) tarball",
+                "size": "51.6 MB",
+                "sha1": "e4f7762cb143aaebc00037bf60b9b116ff554134",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-amd64-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc3.darwin-amd64-osx10.8.pkg",
+                "summary": "go1.2rc3 Mac OS X (x86 64-bit) PKG installer",
+                "size": "52.4 MB",
+                "sha1": "4430b2be4c222d968ee9abde7be9a2ae59781c15",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-amd64-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc3.darwin-amd64-osx10.8.tar.gz",
+                "summary": "go1.2rc3 Mac OS X (x86 64-bit) tarball",
+                "size": "52.1 MB",
+                "sha1": "b395703af75d1239f3a7f49c73f9651ba9e11d51",
+                "url": "https://go.googlecode.com/files/go1.2rc3.darwin-amd64-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc3.freebsd-386.tar.gz",
+                "summary": "go1.2rc3 FreeBSD (x86 32-bit) tarball",
+                "size": "39.8 MB",
+                "sha1": "5679ba67fbf97ce54a380b470fbf73ea18a2389e",
+                "url": "https://go.googlecode.com/files/go1.2rc3.freebsd-386.tar.gz"
+            }, {
+                "filename": "go1.2rc3.freebsd-amd64.tar.gz",
+                "summary": "go1.2rc3 FreeBSD (x86 64-bit) tarball",
+                "size": "40.6 MB",
+                "sha1": "0c3d646f73f08fb87497a401036bf10747ae8780",
+                "url": "https://go.googlecode.com/files/go1.2rc3.freebsd-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc3.linux-386.tar.gz",
+                "summary": "go1.2rc3 Linux (x86 32-bit) tarball",
+                "size": "41.1 MB",
+                "sha1": "024ffd3cd87e5440a32c8f2909a586c4ed78e2b9",
+                "url": "https://go.googlecode.com/files/go1.2rc3.linux-386.tar.gz"
+            }, {
+                "filename": "go1.2rc3.linux-amd64.tar.gz",
+                "summary": "go1.2rc3 Linux (x86 64-bit) tarball",
+                "size": "53.3 MB",
+                "sha1": "50ae0d0eb18cea39dc1e7e8d456bab5225e1f660",
+                "url": "https://go.googlecode.com/files/go1.2rc3.linux-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc3.src.tar.gz",
+                "summary": "go1.2rc3 (source only)",
+                "size": "9.1 MB",
+                "sha1": "1bfcb525b28c2fe65d0b7d6dbd4418ce2027e2eb",
+                "url": "https://go.googlecode.com/files/go1.2rc3.src.tar.gz"
+            }, {
+                "filename": "go1.2rc3.windows-386.msi",
+                "summary": "go1.2rc3 Windows (x86 32-bit) MSI installer",
+                "size": "33.6 MB",
+                "sha1": "3ad857fbac1ca18a6837b1d246835ecee948ce47",
+                "url": "https://go.googlecode.com/files/go1.2rc3.windows-386.msi"
+            }, {
+                "filename": "go1.2rc3.windows-386.zip",
+                "summary": "go1.2rc3 Windows (x86 32-bit) ZIP archive",
+                "size": "41.2 MB",
+                "sha1": "2734c208afd41a165ef6cf514fadbe1e894bac23",
+                "url": "https://go.googlecode.com/files/go1.2rc3.windows-386.zip"
+            }, {
+                "filename": "go1.2rc3.windows-amd64.msi",
+                "summary": "go1.2rc3 Windows (x86 64-bit) MSI installer",
+                "size": "42.9 MB",
+                "sha1": "9d86114d538fcd00477e6e5e1a89a52f5c7437da",
+                "url": "https://go.googlecode.com/files/go1.2rc3.windows-amd64.msi"
+            }, {
+                "filename": "go1.2rc3.windows-amd64.zip",
+                "summary": "go1.2rc3 Windows (x86 64-bit) ZIP archive",
+                "size": "54.5 MB",
+                "sha1": "96042fb293b98451f32a8dd82127bfce450898f9",
+                "url": "https://go.googlecode.com/files/go1.2rc3.windows-amd64.zip"
+            }
+        ]
+    }, {
+        "version": "go1.2rc2",
+        "date": "2013-10-17",
+        "files": [
+            {
+                "filename": "go1.2rc2.darwin-386-osx10.6.pkg",
+                "summary": "go1.2rc2 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.0 MB",
+                "sha1": "73484d6e6ea8b2dbbbe08dda5e7db4ef7f949420",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-386-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc2.darwin-386-osx10.6.tar.gz",
+                "summary": "go1.2rc2 Mac OS X (x86 32-bit) tarball",
+                "size": "39.8 MB",
+                "sha1": "37f260f9db079bc9c12a53862e77c1ddf52f91ea",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-386-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc2.darwin-386-osx10.8.pkg",
+                "summary": "go1.2rc2 Mac OS X (x86 32-bit) PKG installer",
+                "size": "40.5 MB",
+                "sha1": "f8499c33e8f2cdb7cdd40244e0624ea07e71f52d",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-386-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc2.darwin-386-osx10.8.tar.gz",
+                "summary": "go1.2rc2 Mac OS X (x86 32-bit) tarball",
+                "size": "40.3 MB",
+                "sha1": "c833b805eb45caacc43bbb704918425136413c4e",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-386-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc2.darwin-amd64-osx10.6.pkg",
+                "summary": "go1.2rc2 Mac OS X (x86 64-bit) PKG installer",
+                "size": "52.0 MB",
+                "sha1": "08d7644f60ccb16824bfbd6c203863beffd03691",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-amd64-osx10.6.pkg"
+            }, {
+                "filename": "go1.2rc2.darwin-amd64-osx10.6.tar.gz",
+                "summary": "go1.2rc2 Mac OS X (x86 64-bit) tarball",
+                "size": "51.8 MB",
+                "sha1": "17c94da69bf2ddc87dd28fafc18086364e32a022",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-amd64-osx10.6.tar.gz"
+            }, {
+                "filename": "go1.2rc2.darwin-amd64-osx10.8.pkg",
+                "summary": "go1.2rc2 Mac OS X (x86 64-bit) PKG installer",
+                "size": "52.5 MB",
+                "sha1": "d5e6222c28ebb0657b561be1a88d72333b142232",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-amd64-osx10.8.pkg"
+            }, {
+                "filename": "go1.2rc2.darwin-amd64-osx10.8.tar.gz",
+                "summary": "go1.2rc2 Mac OS X (x86 64-bit) tarball",
+                "size": "52.3 MB",
+                "sha1": "16ce6825611ba4e469d852aaf02b4345840afbed",
+                "url": "https://go.googlecode.com/files/go1.2rc2.darwin-amd64-osx10.8.tar.gz"
+            }, {
+                "filename": "go1.2rc2.freebsd-386.tar.gz",
+                "summary": "go1.2rc2 FreeBSD (x86 32-bit) tarball",
+                "size": "39.9 MB",
+                "sha1": "c829551da15fd4e0cd27aee03530bdcfa668bb58",
+                "url": "https://go.googlecode.com/files/go1.2rc2.freebsd-386.tar.gz"
+            }, {
+                "filename": "go1.2rc2.freebsd-amd64.tar.gz",
+                "summary": "go1.2rc2 FreeBSD (x86 64-bit) tarball",
+                "size": "40.7 MB",
+                "sha1": "41bbda0f5df3c1f31b293f927d3f4c6bc6b842e1",
+                "url": "https://go.googlecode.com/files/go1.2rc2.freebsd-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc2.linux-386.tar.gz",
+                "summary": "go1.2rc2 Linux (x86 32-bit) tarball",
+                "size": "41.2 MB",
+                "sha1": "05b6d2c5e12718a8995e945eb3e219b57f4f91fe",
+                "url": "https://go.googlecode.com/files/go1.2rc2.linux-386.tar.gz"
+            }, {
+                "filename": "go1.2rc2.linux-amd64.tar.gz",
+                "summary": "go1.2rc2 Linux (x86 64-bit) tarball",
+                "size": "53.5 MB",
+                "sha1": "deaae23f2408b1a57e6578fc4c06c220b778ea16",
+                "url": "https://go.googlecode.com/files/go1.2rc2.linux-amd64.tar.gz"
+            }, {
+                "filename": "go1.2rc2.src.tar.gz",
+                "summary": "go1.2rc2 (source only)",
+                "size": "9.1 MB",
+                "sha1": "1fc3b39431551ffa69035ccffea18f4328dc2e8c",
+                "url": "https://go.googlecode.com/files/go1.2rc2.src.tar.gz"
+            }, {
+                "filename": "go1.2rc2.windows-386.msi",
+                "summary": "go1.2rc2 Windows (x86 32-bit) MSI installer",
+                "size": "33.6 MB",
+                "sha1": "00107ded3d891b2e8fb9417db4e89ad3c8800b2c",
+                "url": "https://go.googlecode.com/files/go1.2rc2.windows-386.msi"
+            }, {
+                "filename": "go1.2rc2.windows-386.zip",
+                "summary": "go1.2rc2 Windows (x86 32-bit) ZIP archive",
+                "size": "41.3 MB",
+                "sha1": "1393a8a4c472b849a103796ce734c4646fd11e4a",
+                "url": "https://go.googlecode.com/files/go1.2rc2.windows-386.zip"
+            }, {
+                "filename": "go1.2rc2.windows-amd64.msi",
+                "summary": "go1.2rc2 Windows (x86 64-bit) MSI installer",
+                "size": "43.0 MB",
+                "sha1": "b7e58015ca08b27030bded783888796da773d8da",
+                "url": "https://go.googlecode.com/files/go1.2rc2.windows-amd64.msi"
+            }, {
+                "filename": "go1.2rc2.windows-amd64.zip",
+                "summary": "go1.2rc2 Windows (x86 64-bit) ZIP archive",
+                "size": "54.6 MB",
+                "sha1": "808c89c7d1b2becd989471052adff41cfd0884d9",
+                "url": "https://go.googlecode.com/files/go1.2rc2.windows-amd64.zip"
+            }
+        ]
+    }, {
 		"version": "go1.2rc1",
 		"date": "2013-09-19",
 		"files": [
