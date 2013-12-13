@@ -3,7 +3,6 @@ package qbs
 import (
 	_ "github.com/coocood/mysql"
 	"testing"
-	"time"
 )
 
 var mysqlSyntax = dialectSyntax{
@@ -16,7 +15,7 @@ var mysqlSyntax = dialectSyntax{
 	"SELECT `post`.`id`, `post`.`author_id`, `post`.`content`, `author`.`id` AS author___id, `author`.`name` AS author___name FROM `post` LEFT JOIN `user` AS `author` ON `post`.`author_id` = `author`.`id`",
 	"SELECT `name`, `grade`, `score` FROM `student` WHERE (grade IN (?, ?, ?)) AND ((score <= ?) OR (score >= ?)) ORDER BY `name`, `grade` DESC LIMIT ? OFFSET ?",
 	"DROP TABLE IF EXISTS `drop_table`",
-	"ALTER TABLE `a` ADD COLUMN `c` varchar(100)",
+	"ALTER TABLE `a` ADD COLUMN `newc` varchar(100)",
 	"CREATE UNIQUE INDEX `iname` ON `itable` (`a`, `b`, `c`)",
 	"CREATE INDEX `iname2` ON `itable2` (`d`, `e`)",
 }
@@ -37,90 +36,114 @@ func registerMysqlTest() {
 	RegisterWithDataSourceName(dsn)
 }
 
+var mysqlSqlTypeResults []string = []string{
+	"boolean",
+	"int",
+	"int",
+	"int",
+	"int",
+	"int",
+	"int",
+	"bigint",
+	"bigint",
+	"bigint",
+	"bigint",
+	"double",
+	"double",
+	"varchar(128)",
+	"longtext",
+	"timestamp",
+	"longblob",
+	"bigint",
+	"int",
+	"boolean",
+	"double",
+	"timestamp",
+	"varchar(128)",
+	"longtext",
+}
+
 func TestMysqlSqlType(t *testing.T) {
 	assert := NewAssert(t)
+
 	d := NewMysql()
-	assert.Equal("boolean", d.sqlType(true, 0))
-	var indirect interface{} = true
-	assert.Equal("boolean", d.sqlType(indirect, 0))
-	assert.Equal("int", d.sqlType(uint32(2), 0))
-	assert.Equal("bigint", d.sqlType(int64(1), 0))
-	assert.Equal("double", d.sqlType(1.8, 0))
-	assert.Equal("longblob", d.sqlType([]byte("asdf"), 0))
-	assert.Equal("longtext", d.sqlType("astring", 0))
-	assert.Equal("longtext", d.sqlType("a", 65536))
-	assert.Equal("varchar(128)", d.sqlType("b", 128))
-	assert.Equal("timestamp", d.sqlType(time.Now(), 0))
+	testModel := structPtrToModel(new(typeTestTable), false, nil)
+	for index, column := range testModel.fields {
+		if storedResult := mysqlSqlTypeResults[index]; storedResult != "-" {
+			result := d.sqlType(*column)
+			assert.Equal(storedResult, result)
+		}
+	}
 }
 
 func TestMysqlTransaction(t *testing.T) {
 	registerMysqlTest()
-	doTestTransaction(t)
+	doTestTransaction(NewAssert(t))
 }
 
 func TestMysqlSaveAndDelete(t *testing.T) {
 	mg, q := setupMysqlDb()
-	doTestSaveAndDelete(t, mg, q)
+	doTestSaveAndDelete(NewAssert(t), mg, q)
 }
 
 func TestMysqlSaveAgain(t *testing.T) {
 	mg, q := setupMysqlDb()
-	doTestSaveAgain(t, mg, q)
+	doTestSaveAgain(NewAssert(t), mg, q)
 }
 
 func TestMysqlForeignKey(t *testing.T) {
 	registerMysqlTest()
-	doTestForeignKey(t)
+	doTestForeignKey(NewAssert(t))
 }
 
 func TestMysqlFind(t *testing.T) {
 	registerMysqlTest()
-	doTestFind(t)
+	doTestFind(NewAssert(t))
 }
 
 func TestMysqlCreateTable(t *testing.T) {
 	mg, _ := setupMysqlDb()
-	doTestCreateTable(t, mg)
+	doTestCreateTable(NewAssert(t), mg)
 }
 
 func TestMysqlUpdate(t *testing.T) {
 	mg, q := setupMysqlDb()
-	doTestUpdate(t, mg, q)
+	doTestUpdate(NewAssert(t), mg, q)
 }
 
 func TestMysqlValidation(t *testing.T) {
 	mg, q := setupMysqlDb()
-	doTestValidation(t, mg, q)
+	doTestValidation(NewAssert(t), mg, q)
 }
 
 func TestMysqlBoolType(t *testing.T) {
 	mg, q := setupMysqlDb()
-	doTestBoolType(t, mg, q)
+	doTestBoolType(NewAssert(t), mg, q)
 }
 
 func TestMysqlStringPk(t *testing.T) {
 	mg, q := setupMysqlDb()
-	doTestStringPk(t, mg, q)
+	doTestStringPk(NewAssert(t), mg, q)
 }
 
 func TestMysqlCount(t *testing.T) {
 	registerMysqlTest()
-	doTestCount(t)
+	doTestCount(NewAssert(t))
 }
 
 func TestMysqlQueryMap(t *testing.T) {
 	mg, q := setupMysqlDb()
-	doTestQueryMap(t, mg, q)
+	doTestQueryMap(NewAssert(t), mg, q)
 }
 
 func TestMysqlBulkInsert(t *testing.T) {
 	registerMysqlTest()
-	doTestBulkInsert(t)
+	doTestBulkInsert(NewAssert(t))
 }
 
 func TestMysqlQueryStruct(t *testing.T) {
 	registerMysqlTest()
-	doTestQueryStruct(t)
+	doTestQueryStruct(NewAssert(t))
 }
 
 func TestMysqlCustomNameConvertion(t *testing.T) {
@@ -129,7 +152,7 @@ func TestMysqlCustomNameConvertion(t *testing.T) {
 	FieldNameToColumnName = noConvert
 	TableNameToStructName = noConvert
 	StructNameToTableName = noConvert
-	doTestForeignKey(t)
+	doTestForeignKey(NewAssert(t))
 	ColumnNameToFieldName = snakeToUpperCamel
 	FieldNameToColumnName = toSnake
 	TableNameToStructName = snakeToUpperCamel
@@ -138,47 +161,47 @@ func TestMysqlCustomNameConvertion(t *testing.T) {
 
 func TestMysqlConnectionLimit(t *testing.T) {
 	registerMysqlTest()
-	doTestConnectionLimit(t)
+	doTestConnectionLimit(NewAssert(t))
 }
 
 func TestMysqlIterate(t *testing.T) {
 	registerMysqlTest()
-	doTestIterate(t)
+	doTestIterate(NewAssert(t))
 }
 
 func TestMysqlAddColumnSQL(t *testing.T) {
-	doTestAddColumSQL(t, mysqlSyntax)
+	doTestAddColumSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlCreateTableSQL(t *testing.T) {
-	doTestCreateTableSQL(t, mysqlSyntax)
+	doTestCreateTableSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlCreateIndexSQL(t *testing.T) {
-	doTestCreateIndexSQL(t, mysqlSyntax)
+	doTestCreateIndexSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlInsertSQL(t *testing.T) {
-	doTestInsertSQL(t, mysqlSyntax)
+	doTestInsertSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlUpdateSQL(t *testing.T) {
-	doTestUpdateSQL(t, mysqlSyntax)
+	doTestUpdateSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlDeleteSQL(t *testing.T) {
-	doTestDeleteSQL(t, mysqlSyntax)
+	doTestDeleteSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlSelectionSQL(t *testing.T) {
-	doTestSelectionSQL(t, mysqlSyntax)
+	doTestSelectionSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlQuerySQL(t *testing.T) {
-	doTestQuerySQL(t, mysqlSyntax)
+	doTestQuerySQL(NewAssert(t), mysqlSyntax)
 }
 func TestMysqlDropTableSQL(t *testing.T) {
-	doTestDropTableSQL(t, mysqlSyntax)
+	doTestDropTableSQL(NewAssert(t), mysqlSyntax)
 }
 
 func TestMysqlDataSourceName(t *testing.T) {
@@ -203,25 +226,25 @@ func TestMysqlDataSourceName(t *testing.T) {
 
 func BenchmarkMysqlFind(b *testing.B) {
 	registerMysqlTest()
-	doBenchmarkFind(b)
+	doBenchmarkFind(b, b.N)
 }
 
 func BenchmarkMysqlQueryStruct(b *testing.B) {
 	registerMysqlTest()
-	doBenchmarkQueryStruct(b)
+	doBenchmarkQueryStruct(b, b.N)
 }
 
 func BenchmarkMysqlDbQuery(b *testing.B) {
 	registerMysqlTest()
-	doBenchmarkDbQuery(b)
+	doBenchmarkDbQuery(b, b.N)
 }
 
 func BenchmarkMysqlStmtQuery(b *testing.B) {
 	registerMysqlTest()
-	doBenchmarkStmtQuery(b)
+	doBenchmarkStmtQuery(b, b.N)
 }
 
 func BenchmarkMysqlTransaction(b *testing.B) {
 	registerMysqlTest()
-	doBenchmarkTransaction(b)
+	doBenchmarkTransaction(b, b.N)
 }
