@@ -272,3 +272,77 @@ func TestNamespaceAttribute(t *testing.T) {
 
 	RunTest(t, "node", "set_ns_attr", testLogic)
 }
+
+func TestUnformattedXml(t *testing.T) {
+	xml := "<?xml version=\"1.0\"?>\n<foo>\n\t<bar>Test</bar>\n</foo>"
+	expected := "<foo>\n\t<bar>Test</bar>\n</foo>"
+	doc, _ := Parse([]byte(xml), DefaultEncodingBytes, nil, DefaultParseOption, DefaultEncodingBytes)
+	root := doc.Root()
+	out := root.ToUnformattedXml()
+	if out != expected {
+		t.Errorf("TestUnformattedXml Expected: %v\nActual: %v", expected, out)
+	}
+
+}
+
+func TestSerializewithFomat(t *testing.T) {
+	xml := "<?xml version=\"1.0\"?>\n<foo>\n\t<bar>Test</bar>\n</foo>"
+	expected := "<foo>\n\t<bar>Test</bar>\n</foo>"
+	doc, _ := Parse([]byte(xml), DefaultEncodingBytes, nil, DefaultParseOption, DefaultEncodingBytes)
+	root := doc.Root()
+	b, size := root.SerializeWithFormat(XML_SAVE_AS_XML|XML_SAVE_NO_DECL, nil, nil)
+	if b == nil {
+		t.Errorf("SerializeWithFormat Expected: %v\nActual: (nil)", expected)
+		return
+	}
+	out := string(b[:size])
+	if out != expected {
+		t.Errorf("SerializeWithFormat Expected: %v\nActual: %v", expected, out)
+	}
+
+}
+
+func TestEvalVariableExpr(t *testing.T) {
+	xml := "<foo />"
+	doc, _ := Parse([]byte(xml), DefaultEncodingBytes, nil, DefaultParseOption, DefaultEncodingBytes)
+	s := newSimpleVariableScope()
+	root := doc.Root()
+	s.variables["spec"] = "XSLT 1.0"
+	s.variables["number"] = 7
+	v, err := root.EvalXPath("$spec", s)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	out := v.(string)
+	if out != "XSLT 1.0" {
+		t.Errorf("TestEvalVariableExpr Expected: %v\nActual: %v", "XSLT 1.0", out)
+	}
+}
+
+func TestEvalStringExpr(t *testing.T) {
+	xml := "<foo />"
+	doc, _ := Parse([]byte(xml), DefaultEncodingBytes, nil, DefaultParseOption, DefaultEncodingBytes)
+	root := doc.Root()
+	v, err := root.EvalXPath("\"Hello\"", nil)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	out := v.(string)
+	if out != "Hello" {
+		t.Errorf("TestEvalStringExpr Expected: %v\nActual: %v", "Hello", out)
+	}
+}
+
+func TestEvalNumericExpr(t *testing.T) {
+	xml := "<foo />"
+	doc, _ := Parse([]byte(xml), DefaultEncodingBytes, nil, DefaultParseOption, DefaultEncodingBytes)
+	root := doc.Root()
+	v, err := root.EvalXPath("7", nil)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	out := v.(float64)
+	if out != 7 {
+		t.Errorf("TestEvalNumericExpr Expected: %v\nActual: %v", 7, out)
+	}
+}

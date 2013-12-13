@@ -1,8 +1,7 @@
 package xml
 
 /*
-#cgo CFLAGS: -I../../../clibs/include/libxml2
-#cgo LDFLAGS: -lxml2 -L../../../clibs/lib
+#cgo pkg-config: libxml-2.0
 
 #include "helper.h"
 */
@@ -10,10 +9,10 @@ import "C"
 
 import (
 	"errors"
-	"gokogiri/help"
-	. "gokogiri/util"
-	"gokogiri/xpath"
-	//"runtime"
+	"github.com/moovweb/gokogiri/help"
+	. "github.com/moovweb/gokogiri/util"
+	"github.com/moovweb/gokogiri/xpath"
+	"os"
 	"unsafe"
 )
 
@@ -22,7 +21,8 @@ type Document interface {
 	CreateElementNode(string) *ElementNode
 	CreateCDataNode(string) *CDataNode
 	CreateTextNode(string) *TextNode
-	//CreateCommentNode(string) *CommentNode
+	CreateCommentNode(string) *CommentNode
+	CreatePINode(string, string) *ProcessingInstructionNode
 	ParseFragment([]byte, []byte, ParseOption) (*DocumentFragment, error)
 
 	DocPtr() unsafe.Pointer
@@ -36,25 +36,52 @@ type Document interface {
 	Free()
 	String() string
 	Root() *ElementNode
+	NodeById(string) *ElementNode
 	BookkeepFragment(*DocumentFragment)
 
 	RecursivelyRemoveNamespaces() error
+	UnparsedEntityURI(string) string
 }
 
 type ParseOption int
 
 const (
-	XML_PARSE_RECOVER   ParseOption = 1 << 0  //relaxed parsing
-	XML_PARSE_NOERROR   ParseOption = 1 << 5  //suppress error reports
-	XML_PARSE_NOWARNING ParseOption = 1 << 6  //suppress warning reports
-	XML_PARSE_NONET     ParseOption = 1 << 11 //forbid network access
+	XML_PARSE_RECOVER    ParseOption = 1 << iota // recover on errors
+	XML_PARSE_NOENT                              // substitute entities
+	XML_PARSE_DTDLOAD                            // load the external subset
+	XML_PARSE_DTDATTR                            // default DTD attributes
+	XML_PARSE_DTDVALID                           // validate with the DTD
+	XML_PARSE_NOERROR                            // suppress error reports
+	XML_PARSE_NOWARNING                          // suppress warning reports
+	XML_PARSE_PEDANTIC                           // pedantic error reporting
+	XML_PARSE_NOBLANKS                           // remove blank nodes
+	XML_PARSE_SAX1                               // use the SAX1 interface internally
+	XML_PARSE_XINCLUDE                           // Implement XInclude substitition
+	XML_PARSE_NONET                              // Forbid network access
+	XML_PARSE_NODICT                             // Do not reuse the context dictionnary
+	XML_PARSE_NSCLEAN                            // remove redundant namespaces declarations
+	XML_PARSE_NOCDATA                            // merge CDATA as text nodes
+	XML_PARSE_NOXINCNODE                         // do not generate XINCLUDE START/END nodes
+	XML_PARSE_COMPACT                            // compact small text nodes; makes tree read-only
+	XML_PARSE_OLD10                              // parse using XML-1.0 before update 5
+	XML_PARSE_NOBASEFIX                          // do not fixup XINCLUDE xml//base uris
+	XML_PARSE_HUGE                               // relax any hardcoded limit from the parser
+	XML_PARSE_OLDSAX                             // parse using SAX2 interface before 2.7.0
+	XML_PARSE_IGNORE_ENC                         // ignore internal document encoding hint
+	XML_PARSE_BIG_LINES                          // Store big lines numbers in text PSVI field
 )
 
 //default parsing option: relax parsing
-var DefaultParseOption ParseOption = XML_PARSE_RECOVER |
+const DefaultParseOption ParseOption = XML_PARSE_RECOVER |
 	XML_PARSE_NONET |
 	XML_PARSE_NOERROR |
 	XML_PARSE_NOWARNING
+
+//Stricter parsing option: load the DTD and report errors
+const StrictParseOption ParseOption = XML_PARSE_NOENT |
+	XML_PARSE_DTDLOAD |
+	XML_PARSE_DTDATTR |
+	XML_PARSE_NOCDATA
 
 //libxml2 use "utf-8" by default, and so do we
 const DefaultEncoding = "utf-8"
@@ -98,6 +125,13 @@ func NewDocument(p unsafe.Pointer, contentLen int, inEncoding, outEncoding []byt
 	return
 }
 
+// Parse creates an XmlDcument from some pre-existing content where the input encoding is known. Byte arrays created from
+// a Go string are utf-8 encoded (you can pass DefaultEncodingBytes in this scenario).
+
+// If you want to build up a document programatically, calling CreateEmptyDocument and building it up using the xml.Node
+// interface is a better approach than building a string and calling Parse.
+
+// If you have an XML file, then ReadFile will automatically determine the encoding according to the XML specification.
 func Parse(content, inEncoding, url []byte, options ParseOption, outEncoding []byte) (doc *XmlDocument, err error) {
 	inEncoding = AppendCStringTerminator(inEncoding)
 	outEncoding = AppendCStringTerminator(outEncoding)
@@ -131,6 +165,37 @@ func Parse(content, inEncoding, url []byte, options ParseOption, outEncoding []b
 	return
 }
 
+// ReadFile loads an XmlDocument from a filename. The encoding declared in the document will be
+// used as the input encoding. If no encoding is declared, the library will use the alogrithm
+// in the XML standard to determine if the document is encoded with UTF-8 or UTF-16.
+func ReadFile(filename string, options ParseOption) (doc *XmlDocument, err error) {
+	// verify the file exists and can be read before we invoke C API
+	_, err = os.Stat(filename)
+	if err != nil {
+		return
+	}
+
+	dataBytes := GetCString([]byte(filename))
+	dataPtr := unsafe.Pointer(&dataBytes[0])
+	var docPtr *C.xmlDoc
+	docPtr = C.xmlReadFile((*C.char)(dataPtr), nil, C.int(options))
+	if docPtr == nil {
+		err = ERR_FAILED_TO_PARSE_XML
+	} else {
+		var encoding []byte
+		// capture the detected input encoding
+		p := docPtr.encoding
+		if p != nil {
+			encoding = []byte(C.GoString((*C.char)(unsafe.Pointer(p))))
+		}
+		doc = NewDocument(unsafe.Pointer(docPtr), 0, encoding, DefaultEncodingBytes)
+	}
+	return
+}
+
+// Create an empty XML document and return an XmlDocument. The root element, along with
+// any top-level comments or processing instructions, can be added by calling
+// AddChild() on the document itself.
 func CreateEmptyDocument(inEncoding, outEncoding []byte) (doc *XmlDocument) {
 	help.LibxmlInitParser()
 	docPtr := C.newEmptyXmlDoc()
@@ -194,6 +259,21 @@ func (document *XmlDocument) Root() (element *ElementNode) {
 	return
 }
 
+// Get an element node by the value of its ID attribute. By convention this attribute
+// is named id, but the actual name of the attribute is set by the document's DTD or schema.
+
+// The value for an ID attribute is guaranteed to be unique within a valid document.
+func (document *XmlDocument) NodeById(id string) (element *ElementNode) {
+	dataBytes := GetCString([]byte(id))
+	dataPtr := unsafe.Pointer(&dataBytes[0])
+	nodePtr := C.xmlGetID(document.Ptr, (*C.xmlChar)(dataPtr))
+	if nodePtr != nil {
+		idattr := NewNode(unsafe.Pointer(nodePtr), document).(*AttributeNode)
+		element = idattr.Parent().(*ElementNode)
+	}
+	return
+}
+
 func (document *XmlDocument) CreateElementNode(tag string) (element *ElementNode) {
 	tagBytes := GetCString([]byte(tag))
 	tagPtr := unsafe.Pointer(&tagBytes[0])
@@ -225,18 +305,27 @@ func (document *XmlDocument) CreateCDataNode(data string) (cdata *CDataNode) {
 	return
 }
 
-/*
-func (document *XmlDocument) CreateCommentNode(data string) (cdata *CommentNode) {
-	dataLen := len(data)
+func (document *XmlDocument) CreateCommentNode(data string) (comment *CommentNode) {
 	dataBytes := GetCString([]byte(data))
 	dataPtr := unsafe.Pointer(&dataBytes[0])
-	nodePtr := C.xmlNewCDataBlock(document.Ptr, (*C.xmlChar)(dataPtr), C.int(dataLen))
+	nodePtr := C.xmlNewComment((*C.xmlChar)(dataPtr))
 	if nodePtr != nil {
-		cdata = NewNode(unsafe.Pointer(nodePtr), document).(*CDataNode)
+		comment = NewNode(unsafe.Pointer(nodePtr), document).(*CommentNode)
 	}
 	return
 }
-*/
+
+func (document *XmlDocument) CreatePINode(name, data string) (pi *ProcessingInstructionNode) {
+	nameBytes := GetCString([]byte(name))
+	namePtr := unsafe.Pointer(&nameBytes[0])
+	dataBytes := GetCString([]byte(data))
+	dataPtr := unsafe.Pointer(&dataBytes[0])
+	nodePtr := C.xmlNewDocPI(document.Ptr, (*C.xmlChar)(namePtr), (*C.xmlChar)(dataPtr))
+	if nodePtr != nil {
+		pi = NewNode(unsafe.Pointer(nodePtr), document).(*ProcessingInstructionNode)
+	}
+	return
+}
 
 func (document *XmlDocument) ParseFragment(input, url []byte, options ParseOption) (fragment *DocumentFragment, err error) {
 	root := document.Root()
@@ -248,6 +337,35 @@ func (document *XmlDocument) ParseFragment(input, url []byte, options ParseOptio
 	return
 }
 
+// Return the value of an NDATA entity declared in the DTD. If there is no such entity or
+// the value cannot be encoded as a valid URI, an empty string is returned.
+//
+// Note that this library assumes you already know the name of entity and does not
+// expose any way of getting the list of entities.
+func (document *XmlDocument) UnparsedEntityURI(name string) (val string) {
+	if name == "" {
+		return
+	}
+
+	nameBytes := GetCString([]byte(name))
+	namePtr := unsafe.Pointer(&nameBytes[0])
+	entity := C.xmlGetDocEntity(document.Ptr, (*C.xmlChar)(namePtr))
+	if entity == nil {
+		return
+	}
+
+	// unlike entity.content (which returns the raw, unprocessed string value of the entity),
+	// it looks like entity.URI includes any escaping needed to treat the value as a URI.
+	valPtr := unsafe.Pointer(entity.URI)
+	if valPtr == nil {
+		return
+	}
+
+	val = C.GoString((*C.char)(valPtr))
+	return
+}
+
+// Free the C structures associated with this document.
 func (document *XmlDocument) Free() {
 	//must free the xpath context before freeing the fragments or unlinked nodes
 	//otherwise, it causes memory leaks and crashes when dealing with very large documents (a few MB)
@@ -275,40 +393,3 @@ func (document *XmlDocument) Free() {
 		document.Ptr = nil
 	}
 }
-
-/*
-func (document *XmlDocument) ToXml() string {
-	document.outputOffset = 0
-	objPtr := unsafe.Pointer(document.XmlNode)
-	nodePtr      := unsafe.Pointer(document.Ptr)
-	encodingPtr := unsafe.Pointer(&(document.Encoding[0]))
-	C.xmlSaveNode(objPtr, nodePtr, encodingPtr, XML_SAVE_AS_XML)
-	return string(document.outputBuffer[:document.outputOffset])
-}
-
-func (document *XmlDocument) ToHtml() string {
-	document.outputOffset = 0
-	documentPtr := unsafe.Pointer(document.XmlNode)
-	docPtr      := unsafe.Pointer(document.Ptr)
-	encodingPtr := unsafe.Pointer(&(document.Encoding[0]))
-	C.xmlSaveNode(documentPtr, docPtr, encodingPtr, XML_SAVE_AS_HTML)
-	return string(document.outputBuffer[:document.outputOffset])
-}
-
-func (document *XmlDocument) ToXml2() string {
-	encodingPtr := unsafe.Pointer(&(document.Encoding[0]))
-	charPtr := C.xmlDocDumpToString(document.Ptr, encodingPtr, 0)
-	defer C.xmlFreeChars(charPtr)
-	return C.GoString(charPtr)
-}
-
-func (document *XmlDocument) ToHtml2() string {
-	charPtr := C.htmlDocDumpToString(document.Ptr, 0)
-	defer C.xmlFreeChars(charPtr)
-	return C.GoString(charPtr)
-}
-
-func (document *XmlDocument) String() string {
-	return document.ToXml()
-}
-*/

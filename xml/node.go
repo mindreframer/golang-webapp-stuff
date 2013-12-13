@@ -4,12 +4,10 @@ package xml
 //#include <string.h>
 import "C"
 
-import "time"
-
 import (
 	"errors"
-	. "gokogiri/util"
-	"gokogiri/xpath"
+	. "github.com/moovweb/gokogiri/util"
+	"github.com/moovweb/gokogiri/xpath"
 	"strconv"
 	"unsafe"
 )
@@ -61,6 +59,11 @@ const (
 	XML_SAVE_WSNONSIG                                 //format with non-significant whitespace
 )
 
+type NamespaceDeclaration struct {
+	Prefix string
+	Uri    string
+}
+
 type Node interface {
 	NodePtr() unsafe.Pointer
 	ResetNodePtr()
@@ -69,6 +72,7 @@ type Node interface {
 	IsValid() bool
 
 	ParseFragment([]byte, []byte, ParseOption) (*DocumentFragment, error)
+	LineNumber() int
 
 	//
 	NodeType() NodeType
@@ -81,10 +85,8 @@ type Node interface {
 	CountChildren() int
 	Attributes() map[string]*AttributeNode
 
-	//
 	Coerce(interface{}) ([]Node, error)
 
-	//
 	AddChild(interface{}) error
 	AddPreviousSibling(interface{}) error
 	AddNextSibling(interface{}) error
@@ -96,48 +98,34 @@ type Node interface {
 	SetChildren(interface{}) error
 	Replace(interface{}) error
 	Wrap(string) error
-	//Swap(interface{}) os.Error
-	//
-	////
+
 	SetContent(interface{}) error
 
-	//
 	Name() string
 	SetName(string)
 
-	//
 	Attr(string) string
 	SetAttr(string, string) string
 	SetNsAttr(string, string, string) string
 	Attribute(string) *AttributeNode
 
-	//
 	Path() string
 
-	//
 	Duplicate(int) Node
 	DuplicateTo(Document, int) Node
 
 	Search(interface{}) ([]Node, error)
-	SearchByDeadline(interface{}, *time.Time) ([]Node, error)
+	SearchWithVariables(interface{}, xpath.VariableScope) ([]Node, error)
+	EvalXPath(interface{}, xpath.VariableScope) (interface{}, error)
+	EvalXPathAsBoolean(interface{}, xpath.VariableScope) bool
 
-	//SetParent(Node)
-	//IsComment() bool
-	//IsCData() bool
-	//IsXml() bool
-	//IsHtml() bool
-	//IsText() bool
-	//IsElement() bool
-	//IsFragment() bool
-	//
-
-	//
 	Unlink()
 	Remove()
 	ResetChildren()
-	//Free()
-	////
+
+	SerializeWithFormat(SerializationOption, []byte, []byte) ([]byte, int)
 	ToXml([]byte, []byte) ([]byte, int)
+	ToUnformattedXml() string
 	ToHtml([]byte, []byte) ([]byte, int)
 	ToBuffer([]byte) []byte
 	String() string
@@ -149,6 +137,7 @@ type Node interface {
 	SetNamespace(string, string)
 	DeclareNamespace(string, string)
 	RemoveDefaultNamespace()
+	DeclaredNamespaces() []NamespaceDeclaration
 }
 
 //run out of memory
@@ -189,6 +178,10 @@ func NewNode(nodePtr unsafe.Pointer, document Document) (node Node) {
 		node = &ElementNode{XmlNode: xmlNode}
 	case XML_CDATA_SECTION_NODE:
 		node = &CDataNode{XmlNode: xmlNode}
+	case XML_COMMENT_NODE:
+		node = &CommentNode{XmlNode: xmlNode}
+	case XML_PI_NODE:
+		node = &ProcessingInstructionNode{XmlNode: xmlNode}
 	case XML_TEXT_NODE:
 		node = &TextNode{XmlNode: xmlNode}
 	}
@@ -221,7 +214,8 @@ func (xmlNode *XmlNode) Coerce(data interface{}) (nodes []Node, err error) {
 	return xmlNode.coerce(data)
 }
 
-//
+// Add a node as a child of the current node.
+// Passing in a nodeset will add all the nodes as children of the current node.
 func (xmlNode *XmlNode) AddChild(data interface{}) (err error) {
 	switch t := data.(type) {
 	default:
@@ -246,6 +240,8 @@ func (xmlNode *XmlNode) AddChild(data interface{}) (err error) {
 	return
 }
 
+// Insert a node immediately before this node in the document.
+// Passing in a nodeset will add all the nodes, in order.
 func (xmlNode *XmlNode) AddPreviousSibling(data interface{}) (err error) {
 	switch t := data.(type) {
 	default:
@@ -270,6 +266,8 @@ func (xmlNode *XmlNode) AddPreviousSibling(data interface{}) (err error) {
 	return
 }
 
+// Insert a node immediately after this node in the document.
+// Passing in a nodeset will add all the nodes, in order.
 func (xmlNode *XmlNode) AddNextSibling(data interface{}) (err error) {
 	switch t := data.(type) {
 	default:
@@ -301,15 +299,20 @@ func (xmlNode *XmlNode) ResetNodePtr() {
 	return
 }
 
+// Returns true if the node is valid. Nodes become
+// invalid when Remove() is called.
 func (xmlNode *XmlNode) IsValid() bool {
 	return xmlNode.valid
 }
 
+// Return the document containing this node. Removed or unlinked
+// nodes still have a document associated with them.
 func (xmlNode *XmlNode) MyDocument() (document Document) {
 	document = xmlNode.Document.DocRef()
 	return
 }
 
+// Return a pointer to the underlying C struct.
 func (xmlNode *XmlNode) NodePtr() (p unsafe.Pointer) {
 	p = unsafe.Pointer(xmlNode.Ptr)
 	return
@@ -544,6 +547,7 @@ func (xmlNode *XmlNode) SetNsAttr(href, name, value string) (val string) {
 	return
 }
 
+// Search for nodes that match an XPath. This is the simplest way to look for nodes.
 func (xmlNode *XmlNode) Search(data interface{}) (result []Node, err error) {
 	switch data := data.(type) {
 	default:
@@ -559,7 +563,7 @@ func (xmlNode *XmlNode) Search(data interface{}) (result []Node, err error) {
 		result, err = xmlNode.Search(string(data))
 	case *xpath.Expression:
 		xpathCtx := xmlNode.Document.DocXPathCtx()
-		nodePtrs, err := xpathCtx.Evaluate(unsafe.Pointer(xmlNode.Ptr), data)
+		nodePtrs, err := xpathCtx.EvaluateAsNodeset(unsafe.Pointer(xmlNode.Ptr), data)
 		if nodePtrs == nil || err != nil {
 			return nil, err
 		}
@@ -570,47 +574,125 @@ func (xmlNode *XmlNode) Search(data interface{}) (result []Node, err error) {
 	return
 }
 
-func (xmlNode *XmlNode) SearchByDeadline(data interface{}, deadline *time.Time) (result []Node, err error) {
-	xpathCtx := xmlNode.Document.DocXPathCtx()
-	xpathCtx.SetDeadline(deadline)
-	result, err = xmlNode.Search(data)
-	xpathCtx.SetDeadline(nil)
+// As the Search function, but passing a VariableScope that can be used to reolve variable
+// names or registered function references in the XPath being evaluated.
+func (xmlNode *XmlNode) SearchWithVariables(data interface{}, v xpath.VariableScope) (result []Node, err error) {
+	switch data := data.(type) {
+	default:
+		err = ERR_UNDEFINED_SEARCH_PARAM
+	case string:
+		if xpathExpr := xpath.Compile(data); xpathExpr != nil {
+			defer xpathExpr.Free()
+			result, err = xmlNode.SearchWithVariables(xpathExpr, v)
+		} else {
+			err = errors.New("cannot compile xpath: " + data)
+		}
+	case []byte:
+		result, err = xmlNode.SearchWithVariables(string(data), v)
+	case *xpath.Expression:
+		xpathCtx := xmlNode.Document.DocXPathCtx()
+		xpathCtx.SetResolver(v)
+		nodePtrs, err := xpathCtx.EvaluateAsNodeset(unsafe.Pointer(xmlNode.Ptr), data)
+		if nodePtrs == nil || err != nil {
+			return nil, err
+		}
+		for _, nodePtr := range nodePtrs {
+			result = append(result, NewNode(nodePtr, xmlNode.Document))
+		}
+	}
 	return
 }
 
-/*
-func (xmlNode *XmlNode) Replace(interface{}) error {
+// Evaluate an XPath and return a result of the appropriate type.
+// If a non-nil VariableScope is provided, any variables or functions present
+// in the xpath will be resolved.
 
+// If the result is a nodeset (or the empty nodeset), a nodeset will be returned.
+
+// If the result is a number, a float64 will be returned.
+
+// If the result is a boolean, a bool will be returned.
+
+// In any other cases, the result will be coerced to a string.
+func (xmlNode *XmlNode) EvalXPath(data interface{}, v xpath.VariableScope) (result interface{}, err error) {
+	switch data := data.(type) {
+	case string:
+		if xpathExpr := xpath.Compile(data); xpathExpr != nil {
+			defer xpathExpr.Free()
+			result, err = xmlNode.EvalXPath(xpathExpr, v)
+		} else {
+			err = errors.New("cannot compile xpath: " + data)
+		}
+	case []byte:
+		result, err = xmlNode.EvalXPath(string(data), v)
+	case *xpath.Expression:
+		xpathCtx := xmlNode.Document.DocXPathCtx()
+		xpathCtx.SetResolver(v)
+		err := xpathCtx.Evaluate(unsafe.Pointer(xmlNode.Ptr), data)
+		if err != nil {
+			return nil, err
+		}
+		rt := xpathCtx.ReturnType()
+		switch rt {
+		case xpath.XPATH_NODESET, xpath.XPATH_XSLT_TREE:
+			nodePtrs, err := xpathCtx.ResultAsNodeset()
+			if err != nil {
+				return nil, err
+			}
+			var output []Node
+			for _, nodePtr := range nodePtrs {
+				output = append(output, NewNode(nodePtr, xmlNode.Document))
+			}
+			result = output
+		case xpath.XPATH_NUMBER:
+			result, _ = xpathCtx.ResultAsNumber()
+		case xpath.XPATH_BOOLEAN:
+			result, _ = xpathCtx.ResultAsBoolean()
+		default:
+			result, _ = xpathCtx.ResultAsString()
+		}
+	default:
+		err = ERR_UNDEFINED_SEARCH_PARAM
+	}
+	return
 }
-func (xmlNode *XmlNode) Swap(interface{}) error {
 
+// Evaluate an XPath and coerce the result to a boolean according to the
+// XPath rules. In the presence of an error, this function will return false
+// even if the expression cannot actually be evaluated.
+
+// In most cases you are better advised to call EvalXPath; this function is
+// intended for packages that implement XML standards and that are fully aware
+// of the consequences of suppressing a compilation error.
+
+// If a non-nil VariableScope is provided, any variables or registered functions present
+// in the xpath will be resolved.
+func (xmlNode *XmlNode) EvalXPathAsBoolean(data interface{}, v xpath.VariableScope) (result bool) {
+	switch data := data.(type) {
+	case string:
+		if xpathExpr := xpath.Compile(data); xpathExpr != nil {
+			defer xpathExpr.Free()
+			result = xmlNode.EvalXPathAsBoolean(xpathExpr, v)
+		} else {
+			//err = errors.New("cannot compile xpath: " + data)
+		}
+	case []byte:
+		result = xmlNode.EvalXPathAsBoolean(string(data), v)
+	case *xpath.Expression:
+		xpathCtx := xmlNode.Document.DocXPathCtx()
+		xpathCtx.SetResolver(v)
+		err := xpathCtx.Evaluate(unsafe.Pointer(xmlNode.Ptr), data)
+		if err != nil {
+			return false
+		}
+		result, _ = xpathCtx.ResultAsBoolean()
+	default:
+		//err = ERR_UNDEFINED_SEARCH_PARAM
+	}
+	return
 }
-func (xmlNode *XmlNode) SetParent(Node) {
 
-}
-func (xmlNode *XmlNode) IsComment() bool {
-
-}
-func (xmlNode *XmlNode) IsCData() bool {
-
-}
-func (xmlNode *XmlNode) IsXml() bool {
-
-}
-func (xmlNode *XmlNode) IsHtml() bool {
-
-}
-func (xmlNode *XmlNode) IsText() bool {
-
-}
-func (xmlNode *XmlNode) IsElement() bool {
-
-}
-func (xmlNode *XmlNode) IsFragment() bool {
-
-}
-*/
-
+// The local name of the node. Use Namespace() to get the namespace.
 func (xmlNode *XmlNode) Name() (name string) {
 	if xmlNode.Ptr.name != nil {
 		p := unsafe.Pointer(xmlNode.Ptr.name)
@@ -619,6 +701,8 @@ func (xmlNode *XmlNode) Name() (name string) {
 	return
 }
 
+// The namespace of the node. This is the empty string if there
+// no associated namespace.
 func (xmlNode *XmlNode) Namespace() (href string) {
 	if xmlNode.Ptr.ns != nil {
 		p := unsafe.Pointer(xmlNode.Ptr.ns.href)
@@ -627,6 +711,7 @@ func (xmlNode *XmlNode) Namespace() (href string) {
 	return
 }
 
+// Set the local name of the node. The namespace is set via SetNamespace().
 func (xmlNode *XmlNode) SetName(name string) {
 	if len(name) > 0 {
 		nameBytes := GetCString([]byte(name))
@@ -664,7 +749,6 @@ func (xmlNode *XmlNode) serialize(format SerializationOption, encoding, outputBu
 	wbuffer := &WriteBuffer{Node: xmlNode, Buffer: outputBuffer}
 	wbufferPtr := unsafe.Pointer(wbuffer)
 
-	format |= XML_SAVE_FORMAT
 	ret := int(C.xmlSaveNode(wbufferPtr, nodePtr, encodingPtr, C.int(format)))
 	if ret < 0 {
 		panic("output error in xml node serialization: " + strconv.Itoa(ret))
@@ -674,12 +758,51 @@ func (xmlNode *XmlNode) serialize(format SerializationOption, encoding, outputBu
 	return wbuffer.Buffer, wbuffer.Offset
 }
 
-func (xmlNode *XmlNode) ToXml(encoding, outputBuffer []byte) ([]byte, int) {
-	return xmlNode.serialize(XML_SAVE_AS_XML, encoding, outputBuffer)
+// SerializeWithFormat allows you to control the serialization flags passed to libxml.
+// In most cases ToXml() and ToHtml() provide sensible defaults and should be preferred.
+
+// The format parameter should be a set of SerializationOption constants or'd together.
+// If encoding is nil, the document's output encoding is used - this defaults to UTF-8.
+// If outputBuffer is nil, one will be created for you.
+func (xmlNode *XmlNode) SerializeWithFormat(format SerializationOption, encoding, outputBuffer []byte) ([]byte, int) {
+	return xmlNode.serialize(format, encoding, outputBuffer)
 }
 
+// ToXml generates an indented XML document with an XML declaration.
+// It is not guaranteed to be well formed unless xmlNode is an element node,
+// or a document node with only one element child.
+
+// If you need finer control over the formatting, call SerializeWithFormat.
+
+// If encoding is nil, the document's output encoding is used - this defaults to UTF-8.
+// If outputBuffer is nil, one will be created for you.
+func (xmlNode *XmlNode) ToXml(encoding, outputBuffer []byte) ([]byte, int) {
+	return xmlNode.serialize(XML_SAVE_AS_XML|XML_SAVE_FORMAT, encoding, outputBuffer)
+}
+
+// ToUnformattedXml generates an unformatted XML document without an XML declaration.
+// This is useful for conforming to various standards and for unit testing, although
+// the output is not guaranteed to be well formed unless xmlNode is an element node.
+func (xmlNode *XmlNode) ToUnformattedXml() string {
+	var b []byte
+	var size int
+	b, size = xmlNode.serialize(XML_SAVE_AS_XML|XML_SAVE_NO_DECL, nil, nil)
+	if b == nil {
+		return ""
+	}
+	return string(b[:size])
+}
+
+// ToHtml generates an indented XML document that conforms to HTML 4.0 rules; meaning
+// that some elements may be unclosed or forced to use end tags even when empty.
+
+// If you want to output XHTML, call SerializeWithFormat and enable the XML_SAVE_XHTML
+// flag as part of the format.
+
+// If encoding is nil, the document's output encoding is used - this defaults to UTF-8.
+// If outputBuffer is nil, one will be created for you.
 func (xmlNode *XmlNode) ToHtml(encoding, outputBuffer []byte) ([]byte, int) {
-	return xmlNode.serialize(XML_SAVE_AS_HTML, encoding, outputBuffer)
+	return xmlNode.serialize(XML_SAVE_AS_HTML|XML_SAVE_FORMAT, encoding, outputBuffer)
 }
 
 func (xmlNode *XmlNode) ToBuffer(outputBuffer []byte) []byte {
@@ -752,15 +875,6 @@ func (xmlNode *XmlNode) addChild(node Node) (err error) {
 		node.Remove()
 	}
 
-	/*
-		childPtr := C.xmlAddChild(xmlNode.Ptr, (*C.xmlNode)(nodePtr))
-		if nodeType == XML_TEXT_NODE && childPtr != (*C.xmlNode)(nodePtr) {
-			//check the retured pointer
-			//if it is not the text node just added, it means that the text node is freed because it has merged into other nodes
-			//then we should invalid this node, because we do not want to have a dangling pointer
-			node.Remove()
-		}
-	*/
 	return
 }
 
@@ -785,15 +899,6 @@ func (xmlNode *XmlNode) addPreviousSibling(node Node) (err error) {
 	} else if ret > 0 {
 		node.Remove()
 	}
-	/*
-		childPtr := C.xmlAddPrevSibling(xmlNode.Ptr, (*C.xmlNode)(nodePtr))
-		if nodeType == XML_TEXT_NODE && childPtr != (*C.xmlNode)(nodePtr) {
-			//check the retured pointer
-			//if it is not the text node just added, it means that the text node is freed because it has merged into other nodes
-			//then we should invalid this node, because we do not want to have a dangling pointer
-			//xmlNode.Document.AddUnlinkedNode(unsafe.Pointer(nodePtr))
-		}
-	*/
 	return
 }
 
@@ -818,15 +923,6 @@ func (xmlNode *XmlNode) addNextSibling(node Node) (err error) {
 	} else if ret > 0 {
 		node.Remove()
 	}
-	/*
-		childPtr := C.xmlAddNextSibling(xmlNode.Ptr, (*C.xmlNode)(nodePtr))
-		if nodeType == XML_TEXT_NODE && childPtr != (*C.xmlNode)(nodePtr) {
-			//check the retured pointer
-			//if it is not the text node just added, it means that the text node is freed because it has merged into other nodes
-			//then we should invalid this node, because we do not want to have a dangling pointer
-			//node.Remove()
-		}
-	*/
 	return
 }
 
@@ -944,6 +1040,26 @@ func (xmlNode *XmlNode) RemoveDefaultNamespace() {
 	C.xmlRemoveDefaultNamespace(nodePtr)
 }
 
+// Returns a list of all the namespace declarations that exist on this node.
+
+// You can add a namespace declaration by calling DeclareNamespace.
+// Calling SetNamespace will automatically add a declaration if required.
+
+// Calling SetNsAttr does *not* automatically create a declaration. This will
+// fixed in a future version.
+func (xmlNode *XmlNode) DeclaredNamespaces() (result []NamespaceDeclaration) {
+	nodePtr := xmlNode.Ptr
+	for ns := nodePtr.nsDef; ns != nil; ns = (*C.xmlNs)(ns.next) {
+		prefixPtr := unsafe.Pointer(ns.prefix)
+		prefix := C.GoString((*C.char)(prefixPtr))
+		hrefPtr := unsafe.Pointer(ns.href)
+		uri := C.GoString((*C.char)(hrefPtr))
+		decl := NamespaceDeclaration{prefix, uri}
+		result = append(result, decl)
+	}
+	return
+}
+
 // Add a namespace declaration to an element.
 
 // This is typically done on the root element or node high up in the tree
@@ -1005,4 +1121,10 @@ func (xmlNode *XmlNode) SetNamespace(prefix, href string) {
 
 	ns := C.xmlNewNs(xmlNode.Ptr, (*C.xmlChar)(hrefPtr), (*C.xmlChar)(prefixPtr))
 	C.xmlSetNs(xmlNode.Ptr, ns)
+}
+
+// Returns the line number on which the node appears, or a -1 if the
+// line number cannot be determined.
+func (xmlNode *XmlNode) LineNumber() int {
+	return int(C.xmlGetLineNo(xmlNode.Ptr))
 }
