@@ -18,16 +18,7 @@ import (
 	"time"
 )
 
-// type Conversation struct {
-// 	Id          bson.ObjectId        `json:"_id" bson:"_id,omitempty"`
-// 	Title       string               `json:"title" bson:"title"`
-// 	Messages    []Msg.Message        `json:"messages" bson:"messages"`
-// 	Venue       Location.GeoLocation `json:"venue" bson:"venue"`
-// 	Circles     []Group.Circle       `json:"circles" bson:"circles"`
-// 	ConvOwner   string               `json:"creator" bson:"creator"`
-// 	Is_Approved bool                 `json:"is_approved" bson:"is_approved"`
-// 	Created_On  time.Time            `json:"created_on" bson:"created_on,omitempty"`
-// }
+// const layout = "Jan 2, 2006 at 3:04pm (MST)"
 
 type Conversation struct {
 	Id          bson.ObjectId        `json:"_id" bson:"_id,omitempty"`
@@ -35,7 +26,7 @@ type Conversation struct {
 	Messages    []Msg.Message        `json:"messages" bson:"messages"`
 	Venue       Location.GeoLocation `json:"venue" bson:"venue"`
 	Circles     []Group.Circle       `json:"circles" bson:"circles"`
-	ConvOwner   User.User            `json:"user" bson:"user"`
+	User        User.User            `json:"user" bson:"user"`
 	Is_Approved bool                 `json:"is_approved" bson:"is_approved"`
 	Created_On  time.Time            `json:"created_on" bson:"created_on,omitempty"`
 }
@@ -83,30 +74,21 @@ func (conv *Conversation) CreateConversation() (RD.ReturnData, Conversation) {
 	return returnData, *conv
 }
 
-func GetConversationsForLocation(locationId string) RD.ReturnData {
-	returnData := RD.ReturnData{}
+func GetConversationsForLocation(locationId string) ([]byte, error) {
+	var response []byte
 	dbSession := Connection.GetDBSession()
 	dbSession.SetMode(mgo.Monotonic, true)
 	dataBase := strings.SplitAfter(os.Getenv("MONGOHQ_URL"), "/")
 	c := dbSession.DB(dataBase[3]).C("conversation")
 
-	res := []Conversation{}
-	err := c.Find(bson.M{"venue.fourid": locationId}).All(&res)
+	conversations := []Conversation{}
+	err := c.Find(bson.M{"venue.fourid": locationId}).All(&conversations)
 	if err != nil {
-		log.Println("Found Nothing Or Something went wrong fetching the Conversation document")
-		returnData.ErrorMsg = err.Error()
-		returnData.Status = "400"
-		returnData.Success = false
 	} else {
-		log.Println(res)
-		returnData.ErrorMsg = "All is well"
-		returnData.Status = "200"
-		returnData.Success = true
-		jsonRes, _ := json.Marshal(res)
-		returnData.JsonData = jsonRes
-		log.Println(string(jsonRes))
+		response, err = json.Marshal(conversations)
 	}
-	return returnData
+	log.Println(string(response))
+	return response, err
 }
 
 func GetConversation(conversationId string) (returnData RD.ReturnData) {

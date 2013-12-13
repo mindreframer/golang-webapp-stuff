@@ -7,6 +7,7 @@ import (
 	Authenticate "github.com/jmadan/go-msgstory/authenticate"
 	Circle "github.com/jmadan/go-msgstory/circle"
 	Conversation "github.com/jmadan/go-msgstory/conversation"
+	// Dialogue "github.com/jmadan/go-msgstory/dialogue"
 	Glocation "github.com/jmadan/go-msgstory/geolocation"
 	Msg "github.com/jmadan/go-msgstory/message"
 	Register "github.com/jmadan/go-msgstory/register"
@@ -19,9 +20,16 @@ import (
 	"strings"
 )
 
+type CompositeMsg struct {
+	Message  Msg.Message `json:"message" bson:"message"`
+	PostedBy User.User   `json:"postedby" bson:"postedby"`
+}
+
 type AppService struct {
 	gorest.RestService `root:"/api/" consumes:"application/json" produces:"application/json"`
-	getApp             gorest.EndPoint `method:"GET" path:"/" output:"string"`
+
+	getApp        gorest.EndPoint `method:"GET" path:"/" output:"string"`
+	resetPassword gorest.EndPoint `method:"POST" path:"/forgot" postdata:"string"`
 }
 
 type UserService struct {
@@ -97,12 +105,19 @@ func (serv ConversationService) CreateConversation(posted string) {
 
 func (serv ConversationService) GetConversationsForLocation(locationId string) string {
 	var data ReturnData.ReturnData
-	data = Conversation.GetConversationsForLocation(locationId)
-	if data.Success {
-		serv.ResponseBuilder().SetResponseCode(200)
-	} else {
+	response, err := Conversation.GetConversationsForLocation(locationId)
+	if err != nil {
+		data.ErrorMsg = err.Error()
+		data.Status = "400"
+		data.Success = false
 		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(data.ToString()))
+	} else {
+		data.Status = "200"
+		data.Success = true
+		data.JsonData = response
+		serv.ResponseBuilder().SetResponseCode(200)
 	}
+
 	return string(data.ToString())
 }
 
@@ -223,17 +238,17 @@ func (serv MsgService) SaveMessage(posted, convoId string) {
 	} else {
 		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(data.ToString()))
 	}
-
 }
 
 //*************User Service Methods ***************
 func (serv UserService) RegisterUser(posted string) {
 
 	type newUser struct {
-		Name     string `json:"name" bson:"name"`
-		Email    string `json:"email" bson:"email"`
-		Handle   string `json:"handle" bson:"handle"`
-		Password string `json:"password" bson:"password"`
+		Name        string `json:"name" bson:"name"`
+		Email       string `json:"email" bson:"email"`
+		Handle      string `json:"handle" bson:"handle"`
+		Password    string `json:"password" bson:"password"`
+		PhoneNumber string `json:"phone" bson:"phone"`
 	}
 
 	var data ReturnData.ReturnData
@@ -253,6 +268,7 @@ func (serv UserService) RegisterUser(posted string) {
 		user.Name = tempUser.Name
 		user.Email = tempUser.Email
 		user.Handle = tempUser.Handle
+		user.PhoneNumber = tempUser.PhoneNumber
 		data = user.CreateUser()
 	}
 	if data.Success {
@@ -268,10 +284,24 @@ func (serv UserService) CreateUser(uemail, pass string) string {
 }
 
 func (serv UserService) GetUser(userid string) string {
-	// user := User.User{}
-	// per := "{User:[" + User.User.GetUser() + "]}"
-	// serv.ResponseBuilder().SetResponseCode(404).Overide(true)
-	return "Some User"
+	var response string
+	var err error
+	var data ReturnData.ReturnData
+	response, err = User.GetUserById(userid)
+	if err != nil {
+		data.Status = "400"
+		data.Success = false
+		data.ErrorMsg = err.Error()
+		serv.ResponseBuilder().SetResponseCode(200)
+	} else {
+		data.ErrorMsg = "All is well"
+		data.Status = "200"
+		data.Success = true
+		data.JsonData = []byte(response)
+		serv.ResponseBuilder().SetResponseCode(400).WriteAndOveride([]byte(data.ToString()))
+	}
+
+	return string(data.ToString())
 }
 
 func (serv UserService) GetAll() string {
@@ -284,6 +314,28 @@ func (serv UserService) GetAll() string {
 func (serv AppService) GetApp() string {
 	m := "{\"Message\": \"Welcome to Mesiji\"}"
 	return m
+}
+
+func (serv AppService) ResetPassword(posted string) {
+
+	user := User.User{}
+	err := json.Unmarshal([]byte(posted), &user)
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println(user.UserToJSON())
+	}
+	userid := User.GetUserByEmail(user.Email)
+	uuid, err := ReturnData.GenUUID()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	emailBody := "<p>Please click on the following link to reset your password. <a href=\"http://www.happenstance.me/reset/"
+	emailBody += userid + "/"
+	emailBody += uuid
+	emailBody += "\"></p>"
+	ReturnData.SendCustomMail(emailBody, "no-reply@happenstance.me", user.GetEmail(), "Reset Password @ happenStance.Me")
 }
 
 func getData(w http.ResponseWriter, r *http.Request) {
