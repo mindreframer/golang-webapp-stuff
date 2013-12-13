@@ -3,7 +3,6 @@ package traffic
 import (
   "os"
   "fmt"
-  "log"
   "path"
   "regexp"
   "strings"
@@ -28,11 +27,6 @@ var (
   env     map[string]interface{}
   logger  ILogger
 )
-
-func init() {
-  env = make(map[string]interface{})
-  SetLogger(log.New(os.Stderr, "", log.LstdFlags))
-}
 
 func Logger() ILogger {
   return logger
@@ -69,12 +63,27 @@ func getStringVar(key string) string {
 }
 
 func pathToRegexpString(routePath string) string {
-  re := regexp.MustCompile(":[^/#?()]+")
-  regexpString := re.ReplaceAllStringFunc(routePath, func(m string) string {
-    return fmt.Sprintf("(?P<%s>[^/#?]+)", m[1:len(m)])
+  var re *regexp.Regexp
+  regexpString := routePath
+
+  // Dots
+  re = regexp.MustCompile(`([^\\])\.`)
+  regexpString = re.ReplaceAllStringFunc(regexpString, func(m string) string {
+    return fmt.Sprintf(`%s\.`, string(m[0]))
   })
 
-  return fmt.Sprintf("^%s$", regexpString)
+  // Wildcard names
+  re = regexp.MustCompile(`:[^/#?()\.\\]+\*`)
+  regexpString = re.ReplaceAllStringFunc(regexpString, func(m string) string {
+    return fmt.Sprintf("(?P<%s>.+)", m[1:len(m) - 1])
+  })
+
+  re = regexp.MustCompile(`:[^/#?()\.\\]+`)
+  regexpString = re.ReplaceAllStringFunc(regexpString, func(m string) string {
+    return fmt.Sprintf(`(?P<%s>[^/#?]+)`, m[1:len(m)])
+  })
+
+  return fmt.Sprintf(`\A%s\z`, regexpString)
 }
 
 func getStringVarWithDefault(key, defaultValue string) string {

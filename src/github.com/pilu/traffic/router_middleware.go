@@ -8,7 +8,7 @@ type RouterMiddleware struct {
   router *Router
 }
 
-func (routerMiddleware *RouterMiddleware) ServeHTTP(w ResponseWriter, r *http.Request, next NextMiddlewareFunc) (ResponseWriter, *http.Request) {
+func (routerMiddleware *RouterMiddleware) ServeHTTP(w ResponseWriter, r *Request, next NextMiddlewareFunc) {
   for _, route := range routerMiddleware.router.routes[HttpMethod(r.Method)] {
     values, ok := route.Match(r.URL.Path)
     if ok {
@@ -19,26 +19,23 @@ func (routerMiddleware *RouterMiddleware) ServeHTTP(w ResponseWriter, r *http.Re
 
       r.URL.RawQuery = newValues.Encode()
 
-      continueAfterBeforeFilter := true
+      handlers := append(routerMiddleware.router.beforeFilters, route.beforeFilters...)
+      handlers = append(handlers, route.Handlers...)
 
-      filters := append(routerMiddleware.router.beforeFilters, route.beforeFilters...)
-
-      for _, beforeFilter := range filters {
-        continueAfterBeforeFilter = beforeFilter(w, r)
-        if !continueAfterBeforeFilter {
+      for _, handler := range handlers {
+        handler(w, r)
+        if w.Written() {
           break
         }
       }
 
-      if continueAfterBeforeFilter {
-        route.Handler(w, r)
+      if w.StatusCode() == http.StatusNotFound && !w.BodyWritten() {
+        routerMiddleware.router.handleNotFound(w, r)
       }
 
-      return w, r
+      return
     }
   }
 
-  w.WriteHeader(http.StatusNotFound)
-
-  return w, r
+  routerMiddleware.router.handleNotFound(w, r)
 }

@@ -7,51 +7,40 @@ import (
   "github.com/pilu/traffic"
 )
 
-func rootHandler(w traffic.ResponseWriter, r *http.Request) {
-  fmt.Fprint(w, "Hello World\n")
+func rootHandler(w traffic.ResponseWriter, r *traffic.Request) {
+  w.WriteText("Hello World\n")
 }
 
-func privatePageHandler(w traffic.ResponseWriter, r *http.Request) {
-  fmt.Fprint(w, "Hello Private Page\n")
+func privatePageHandler(w traffic.ResponseWriter, r *traffic.Request) {
+  w.WriteText("Hello Private Page\n")
 }
 
-func pageHandler(w traffic.ResponseWriter, r *http.Request) {
-  params := r.URL.Query()
-  fmt.Fprintf(w, "Category ID: %s\n", params.Get("category_id"))
-  fmt.Fprintf(w, "Page ID: %s\n", params.Get("id"))
+func pageHandler(w traffic.ResponseWriter, r *traffic.Request) {
+  w.WriteText("Category ID: %s\n", r.Param("category_id"))
+  w.WriteText("Page ID: %s\n", r.Param("id"))
 }
 
-func checkApiKey(w traffic.ResponseWriter, r *http.Request) bool {
-  params := r.URL.Query()
-  if params.Get("api_key") != "foo" {
+func checkApiKey(w traffic.ResponseWriter, r *traffic.Request) {
+  if r.Param("api_key") != "foo" {
     w.WriteHeader(http.StatusUnauthorized)
-    return false
+    w.WriteText("Not authorized\n")
   }
-
-  return true
 }
 
-func checkPrivatePageApiKey(w traffic.ResponseWriter, r *http.Request) bool {
-  params := r.URL.Query()
-  if params.Get("private_api_key") != "bar" {
+func checkPrivatePageApiKey(w traffic.ResponseWriter, r *traffic.Request) {
+  if r.Param("private_api_key") != "bar" {
     w.WriteHeader(http.StatusUnauthorized)
-    return false
+    w.WriteText("Not authorized\n")
   }
-
-  return true
 }
 
-func addAppNameHeader(w traffic.ResponseWriter, r *http.Request) bool {
+func addAppNameHeader(w traffic.ResponseWriter, r *traffic.Request) {
   w.Header().Add("X-APP-NAME", "My App")
-
-  return true
 }
 
-func addTimeHeader(w traffic.ResponseWriter, r *http.Request) bool {
+func addTimeHeader(w traffic.ResponseWriter, r *traffic.Request) {
   t := fmt.Sprintf("%s", time.Now())
   w.Header().Add("X-APP-TIME", t)
-
-  return true
 }
 
 func main() {
@@ -65,9 +54,7 @@ func main() {
           AddBeforeFilter(checkPrivatePageApiKey)
 
   // Executed before all handlers
-  router.AddBeforeFilter(checkApiKey).
-         AddBeforeFilter(addAppNameHeader).
-         AddBeforeFilter(addTimeHeader)
+  router.AddBeforeFilter(checkApiKey, addAppNameHeader, addTimeHeader)
 
   router.Run()
 }

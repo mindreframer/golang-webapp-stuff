@@ -8,6 +8,8 @@ import (
   "io/ioutil"
 )
 
+const TemplateExtension = ".tpl"
+
 type RenderFunc func(w ResponseWriter, template string, data interface{})
 
 var templateManager *TemplateManager
@@ -20,8 +22,22 @@ type TemplateManager struct {
   templatesParseError error
 }
 
+var templateFuncs = make(map[string]interface{})
+
+func TemplateFuncs(funcs map[string]interface{}) {
+  for name, fn := range funcs {
+    TemplateFunc(name, fn)
+  }
+}
+
+func TemplateFunc(name string, fn interface{}) {
+  templateFuncs[name] = fn
+}
+
 func (t *TemplateManager) loadTemplates() {
   t.templates = template.New("templates")
+  t.templates.Funcs(templateFuncs)
+
   if t.viewsBasePath == "" {
     panic("views base path is blank")
   }
@@ -36,7 +52,7 @@ func (t *TemplateManager) WalkFunc(path string, info os.FileInfo, err error) err
     return err
   }
 
-  if extension := filepath.Ext(path); !info.IsDir() && extension == ".tmpl" {
+  if extension := filepath.Ext(path); !info.IsDir() && extension == TemplateExtension {
     relativePath, err  := filepath.Rel(t.viewsBasePath, path)
     if err != nil {
       t.templatesReadError = err
@@ -107,6 +123,10 @@ func initTemplateManager() {
   templateManager = newTemplateManager()
 }
 
-func Render(w ResponseWriter, template string, data interface{}) {
-  templateManager.renderFunc(w, template, data)
+func RenderTemplate(w ResponseWriter, templateName string, data ...interface{}) {
+  if len(data) == 0 {
+    templateManager.renderFunc(w, templateName, nil)
+  } else {
+    templateManager.renderFunc(w, templateName, data[0])
+  }
 }

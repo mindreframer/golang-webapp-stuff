@@ -1,9 +1,11 @@
 package traffic
 
 import (
+  "fmt"
   "testing"
-  "net/http"
   "reflect"
+  "net/http"
+  "net/http/httptest"
   assert "github.com/pilu/miniassert"
 )
 
@@ -79,8 +81,8 @@ func TestRouter_AddBeforeFilter(t *testing.T) {
   router := New()
   assert.Equal(t, 0, len(router.beforeFilters))
 
-  filterA := BeforeFilterFunc(func(w ResponseWriter, r *http.Request) bool { return true })
-  filterB := BeforeFilterFunc(func(w ResponseWriter, r *http.Request) bool { return true })
+  filterA := HttpHandleFunc(func(w ResponseWriter, r *Request) {})
+  filterB := HttpHandleFunc(func(w ResponseWriter, r *Request) {})
 
   router.AddBeforeFilter(filterA)
   assert.Equal(t, 1, len(router.beforeFilters))
@@ -92,19 +94,61 @@ func TestRouter_AddBeforeFilter(t *testing.T) {
 }
 
 func TestRouter_SetVar(t *testing.T) {
-  resetGlobalEnv()
+  defer resetGlobalEnv()
   router := New()
   router.SetVar("foo", "bar")
   assert.Equal(t, "bar", router.env["foo"])
-  resetGlobalEnv()
 }
 
 func TestRouter_GetVar(t *testing.T) {
-  resetGlobalEnv()
+  defer resetGlobalEnv()
   router := New()
   env["global-foo"] = "global-foo"
   assert.Equal(t, "global-foo", router.GetVar("global-foo"))
   router.env["global-foo"] = "router-foo"
   assert.Equal(t, "router-foo", router.GetVar("global-foo"))
-  resetGlobalEnv()
+}
+
+func TestRouter_ServeHTTP_NotFound(t *testing.T) {
+  defer resetGlobalEnv()
+  SetVar("env", "test")
+
+  router := New()
+  request, _  := http.NewRequest("GET", "/", nil)
+  recorder    := httptest.NewRecorder()
+  router.ServeHTTP(recorder, request)
+
+  assert.Equal(t, "404 page not found", string(recorder.Body.Bytes()))
+
+  router.NotFoundHandler = func(w ResponseWriter, r *Request) {
+    fmt.Fprint(w, "custom 404 messages")
+  }
+
+  request, _  = http.NewRequest("GET", "/", nil)
+  recorder = httptest.NewRecorder()
+  router.ServeHTTP(recorder, request)
+
+  assert.Equal(t, "custom 404 messages", string(recorder.Body.Bytes()))
+
+  // test-1 handler writes header but does't write in the body.
+  router.Get("/test-1", func(w ResponseWriter, r *Request) {
+    w.WriteHeader(http.StatusNotFound)
+  })
+
+  request, _  = http.NewRequest("GET", "/test-1", nil)
+  recorder = httptest.NewRecorder()
+  router.ServeHTTP(recorder, request)
+  assert.Equal(t, "custom 404 messages", string(recorder.Body.Bytes()))
+
+  // test-2 handler sends a 404 but write in the body too,
+  // so the custom not found handler should not be called.
+  router.Get("/test-2", func(w ResponseWriter, r *Request) {
+    w.WriteHeader(http.StatusNotFound)
+    fmt.Fprint(w, "test 2 body")
+  })
+
+  request, _  = http.NewRequest("GET", "/test-2", nil)
+  recorder = httptest.NewRecorder()
+  router.ServeHTTP(recorder, request)
+  assert.Equal(t, "test 2 body", string(recorder.Body.Bytes()))
 }

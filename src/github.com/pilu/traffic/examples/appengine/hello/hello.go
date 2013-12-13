@@ -19,8 +19,8 @@ func init() {
   http.Handle("/", t)
 }
 
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-  traffic.Render(w, "index", struct{
+func rootHandler(w traffic.ResponseWriter, r *traffic.Request) {
+  w.Render(w, "index", struct{
     Message string
   }{
     "Hello Google App Engine",

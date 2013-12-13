@@ -4,26 +4,30 @@ import (
   "os"
   "fmt"
   "log"
+  "runtime"
   "net/http"
   "github.com/pilu/config"
 )
 
 type HttpMethod string
 
-type BeforeFilterFunc func(ResponseWriter, *http.Request) bool
+type ErrorHandlerFunc func(ResponseWriter, *Request, interface{})
 
 type NextMiddlewareFunc func() Middleware
 
+type HttpHandleFunc func(ResponseWriter, *Request)
+
 type Middleware interface {
-  ServeHTTP(ResponseWriter, *http.Request, NextMiddlewareFunc) (ResponseWriter, *http.Request)
+  ServeHTTP(ResponseWriter, *Request, NextMiddlewareFunc)
 }
 
 type Router struct {
-  routes map[HttpMethod][]*Route
   NotFoundHandler HttpHandleFunc
-  beforeFilters []BeforeFilterFunc
-  middlewares []Middleware
-  env map[string]interface{}
+  ErrorHandler    ErrorHandlerFunc
+  routes          map[HttpMethod][]*Route
+  beforeFilters   []HttpHandleFunc
+  middlewares     []Middleware
+  env             map[string]interface{}
 }
 
 func (router Router) MiddlewareEnumerator() func() Middleware {
@@ -41,8 +45,8 @@ func (router Router) MiddlewareEnumerator() func() Middleware {
   return next
 }
 
-func (router *Router) Add(method HttpMethod, path string, handler HttpHandleFunc) *Route {
-  route := NewRoute(path, handler)
+func (router *Router) Add(method HttpMethod, path string, handlers ...HttpHandleFunc) *Route {
+  route := NewRoute(path, handlers...)
   router.addRoute(method, route)
 
   return route
@@ -52,58 +56,79 @@ func (router *Router) addRoute(method HttpMethod, route *Route) {
   router.routes[method] = append(router.routes[method], route)
 }
 
-func (router *Router) Get(path string, handler HttpHandleFunc) *Route {
-  route := router.Add(HttpMethod("GET"), path, handler)
+func (router *Router) Get(path string, handlers ...HttpHandleFunc) *Route {
+  route := router.Add(HttpMethod("GET"), path, handlers...)
   router.addRoute(HttpMethod("HEAD"), route)
 
   return route
 }
 
-func (router *Router) Post(path string, handler HttpHandleFunc) *Route {
-  return router.Add(HttpMethod("POST"), path, handler)
+func (router *Router) Post(path string, handlers ...HttpHandleFunc) *Route {
+  return router.Add(HttpMethod("POST"), path, handlers...)
 }
 
-func (router *Router) Delete(path string, handler HttpHandleFunc) *Route {
-  return router.Add(HttpMethod("DELETE"), path, handler)
+func (router *Router) Delete(path string, handlers ...HttpHandleFunc) *Route {
+  return router.Add(HttpMethod("DELETE"), path, handlers...)
 }
 
-func (router *Router) Put(path string, handler HttpHandleFunc) *Route {
-  return router.Add(HttpMethod("PUT"), path, handler)
+func (router *Router) Put(path string, handlers ...HttpHandleFunc) *Route {
+  return router.Add(HttpMethod("PUT"), path, handlers...)
 }
 
-func (router *Router) Patch(path string, handler HttpHandleFunc) *Route {
-  return router.Add(HttpMethod("PATCH"), path, handler)
+func (router *Router) Patch(path string, handlers ...HttpHandleFunc) *Route {
+  return router.Add(HttpMethod("PATCH"), path, handlers...)
 }
 
-func (router *Router) AddBeforeFilter(beforeFilter BeforeFilterFunc) *Router {
-  router.beforeFilters = append(router.beforeFilters, beforeFilter)
+func (router *Router) AddBeforeFilter(beforeFilters ...HttpHandleFunc) *Router {
+  router.beforeFilters = append(router.beforeFilters, beforeFilters...)
 
   return router
 }
 
-func (router *Router) handleNotFound (w ResponseWriter, r *http.Request) {
+func (router *Router) handleNotFound(w ResponseWriter, r *Request) {
   if router.NotFoundHandler != nil {
     router.NotFoundHandler(w, r)
   } else {
+    w.WriteHeader(http.StatusNotFound)
     fmt.Fprint(w, "404 page not found")
   }
 }
 
-func (router *Router) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-  w := newAppResponseWriter(rw, &router.env)
-  w.Header().Set("Content-Type", "text/html")
+func (router *Router) handlePanic(w ResponseWriter, r *Request, err interface{}) {
+  if router.ErrorHandler != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    router.ErrorHandler(w, r, err)
+  } else {
+    http.Error(w, "Something went wrong", http.StatusInternalServerError)
+  }
+
+  const size = 4096
+  stack := make([]byte, size)
+  stack = stack[:runtime.Stack(stack, false)]
+
+  logger.Printf("%v\n", err)
+  logger.Printf("%s\n", string(stack))
+}
+
+func (router *Router) ServeHTTP(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
+  w := newResponseWriter(httpResponseWriter, &router.env)
+  w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+  r := newRequest(httpRequest)
+
+  defer func() {
+    if recovered := recover(); recovered != nil {
+      router.handlePanic(w, r, recovered)
+    }
+  }()
 
   nextMiddlewareFunc := router.MiddlewareEnumerator()
   if nextMiddleware := nextMiddlewareFunc(); nextMiddleware != nil {
     nextMiddleware.ServeHTTP(w, r, nextMiddlewareFunc)
   }
-
-  if w.StatusCode() == http.StatusNotFound {
-    router.handleNotFound(w, r)
-  }
 }
 
-func (router *Router) AddMiddleware(middleware Middleware) {
+func (router *Router) Use(middleware Middleware) {
   router.middlewares = append([]Middleware{middleware}, router.middlewares...)
 }
 
@@ -120,34 +145,22 @@ func (router *Router) GetVar(key string) interface{} {
   return GetVar(key)
 }
 
-func (router *Router) loadConfigurationsFromFile(path, env string) {
-  mainSectionName := "main"
-  sections, err := config.ParseFile(path, mainSectionName)
-  if err != nil {
-    panic(err)
-  }
-
-  for section, options := range sections {
-    if section == mainSectionName || section == env {
-      for key, value := range options {
-        router.SetVar(key, value)
-      }
-    }
-  }
-}
-
 func addDevelopmentMiddlewares(router *Router) {
   // Static middleware
-  router.AddMiddleware(NewStaticMiddleware(PublicPath()))
+  router.Use(NewStaticMiddleware(PublicPath()))
 
   // Logger middleware
   loggerMiddleware := &LoggerMiddleware{
     router: router,
   }
-  router.AddMiddleware(loggerMiddleware)
+  router.Use(loggerMiddleware)
 
   // ShowErrors middleware
-  router.AddMiddleware(&ShowErrorsMiddleware{})
+  router.Use(&ShowErrorsMiddleware{})
+
+  if getStringVar("build_errors_middleware") != "" {
+    router.Use(&BuildErrorsMiddleware{})
+  }
 }
 
 func (router *Router) Run() {
@@ -159,15 +172,43 @@ func (router *Router) Run() {
   }
 }
 
+func loadConfigurationsFromFile(path, env string) {
+  mainSectionName := "main"
+  sections, err := config.ParseFile(path, mainSectionName)
+  if err != nil {
+    panic(err)
+  }
+
+  for section, options := range sections {
+    if section == mainSectionName || section == env {
+      for key, value := range options {
+        SetVar(key, value)
+      }
+    }
+  }
+}
+
+func init() {
+  env = make(map[string]interface{})
+  SetLogger(log.New(os.Stderr, "", log.LstdFlags))
+
+  // configuration
+  configFile := ConfigFilePath()
+  if _, err := os.Stat(configFile); err == nil {
+    loadConfigurationsFromFile(configFile, Env())
+  }
+}
+
 func New() *Router {
-  router := &Router{}
-  router.routes = make(map[HttpMethod][]*Route)
-  router.beforeFilters = make([]BeforeFilterFunc, 0)
-  router.middlewares = make([]Middleware, 0)
-  router.env = make(map[string]interface{})
+  router := &Router{
+    routes:         make(map[HttpMethod][]*Route),
+    beforeFilters:  make([]HttpHandleFunc, 0),
+    middlewares:    make([]Middleware, 0),
+    env:            make(map[string]interface{}),
+  }
 
   routerMiddleware := &RouterMiddleware{ router }
-  router.AddMiddleware(routerMiddleware)
+  router.Use(routerMiddleware)
 
   // Environment
   env := Env()
@@ -175,12 +216,6 @@ func New() *Router {
   // Add useful middlewares for development
   if env == EnvDevelopment {
     addDevelopmentMiddlewares(router)
-  }
-
-  // configuration
-  configFile := ConfigFilePath()
-  if _, err := os.Stat(configFile); err == nil {
-    router.loadConfigurationsFromFile(configFile, env)
   }
 
   initTemplateManager()
