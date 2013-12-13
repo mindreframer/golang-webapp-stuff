@@ -13,6 +13,7 @@ https://github.com/google/go-github.git
 https://github.com/gorilla/mux.git
 https://github.com/gosexy/db.git
 https://github.com/hoisie/web.git
+https://github.com/insionng/toropress.git
 https://github.com/jimmykuu/gopher.git
 https://github.com/jingweno/progmob.git
 https://github.com/jmadan/go-msgstory.git
@@ -24,6 +25,7 @@ https://github.com/jmoiron/sqlx.git
 https://github.com/kentaro/delta.git
 https://github.com/kr/hk.git
 https://github.com/ku-ovdp/api.git
+https://github.com/lunny/xorm.git
 https://github.com/mailgun/vulcan.git
 https://github.com/mattbaird/gochimp.git
 https://github.com/moovweb/gokogiri.git
@@ -39,9 +41,7 @@ https://github.com/stathat/bingo.git
 https://github.com/StefanKjartansson/fyrirtaekjaskra.git
 https://github.com/stretchr/goweb.git
 https://github.com/tanema/mgorx.git
+https://github.com/tus/tusd.git
 https://github.com/ugorji/go.git
 https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
-https://github.com/lunny/xorm.git
-https://github.com/insionng/toropress.git
-https://github.com/tus/tusd.git
