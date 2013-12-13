@@ -24,22 +24,28 @@ type Router interface {
 	Put(string, ...Handler) Route
 	// Delete adds a route for a HTTP DELETE request to the specified matching pattern.
 	Delete(string, ...Handler) Route
+	// Options adds a route for a HTTP OPTIONS request to the specified matching pattern.
+	Options(string, ...Handler) Route
+	// Head adds a route for a HTTP HEAD request to the specified matching pattern.
+	Head(string, ...Handler) Route
+	// Any adds a route for any HTTP method request to the specified matching pattern.
+	Any(string, ...Handler) Route
 
-	// NotFound sets the handler that is called when a no route matches a request. Throws a basic 404 by default.
-	NotFound(Handler)
+	// NotFound sets the handlers that are called when a no route matches a request. Throws a basic 404 by default.
+	NotFound(...Handler)
 
 	// Handle is the entry point for routing. This is used as a martini.Handler
 	Handle(http.ResponseWriter, *http.Request, Context)
 }
 
 type router struct {
-	routes   []*route
-	notFound Handler
+	routes    []*route
+	notFounds []Handler
 }
 
 // NewRouter creates a new Router instance.
 func NewRouter() Router {
-	return &router{notFound: http.NotFound}
+	return &router{notFounds: []Handler{http.NotFound}}
 }
 
 func (r *router) Get(pattern string, h ...Handler) Route {
@@ -62,6 +68,18 @@ func (r *router) Delete(pattern string, h ...Handler) Route {
 	return r.addRoute("DELETE", pattern, h)
 }
 
+func (r *router) Options(pattern string, h ...Handler) Route {
+	return r.addRoute("OPTIONS", pattern, h)
+}
+
+func (r *router) Head(pattern string, h ...Handler) Route {
+	return r.addRoute("HEAD", pattern, h)
+}
+
+func (r *router) Any(pattern string, h ...Handler) Route {
+	return r.addRoute("*", pattern, h)
+}
+
 func (r *router) Handle(res http.ResponseWriter, req *http.Request, context Context) {
 	for _, route := range r.routes {
 		ok, vals := route.Match(req.Method, req.URL.Path)
@@ -79,14 +97,13 @@ func (r *router) Handle(res http.ResponseWriter, req *http.Request, context Cont
 	}
 
 	// no routes exist, 404
-	_, err := context.Invoke(r.notFound)
-	if err != nil {
-		panic(err)
-	}
+	c := &routeContext{context, 0, r.notFounds}
+	context.MapTo(c, (*Context)(nil))
+	c.run()
 }
 
-func (r *router) NotFound(handler Handler) {
-	r.notFound = handler
+func (r *router) NotFound(handler ...Handler) {
+	r.notFounds = handler
 }
 
 func (r *router) addRoute(method string, pattern string, handlers []Handler) *route {
@@ -126,8 +143,9 @@ func newRoute(method string, pattern string, handlers []Handler) *route {
 	return &route
 }
 
-func (r *route) Match(method string, path string) (bool, map[string]string) {
-	if method != r.method {
+func (r route) Match(method string, path string) (bool, map[string]string) {
+	// add Any method matching support
+	if r.method != "*" && method != r.method {
 		return false, nil
 	}
 
