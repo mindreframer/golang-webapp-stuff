@@ -44,3 +44,4 @@ https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
 https://github.com/lunny/xorm.git
 https://github.com/insionng/toropress.git
+https://github.com/tus/tusd.git
