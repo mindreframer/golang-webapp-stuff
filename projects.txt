@@ -5,6 +5,7 @@ https://github.com/codegangsta/martini-contrib.git
 https://github.com/codegangsta/martini.git
 https://github.com/coocood/qbs.git
 https://github.com/coopernurse/gorp.git
+https://github.com/cypriss/golang-mux-benchmark.git
 https://github.com/eaigner/hood.git
 https://github.com/emicklei/go-restful.git
 https://github.com/emicklei/landskape.git
@@ -45,4 +46,3 @@ https://github.com/tus/tusd.git
 https://github.com/ugorji/go.git
 https://github.com/vole/vole.git
 https://github.com/we4tech/golang-email-tracker.git
-https://github.com/cypriss/golang-mux-benchmark.git
