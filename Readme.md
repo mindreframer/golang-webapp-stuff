@@ -38,6 +38,10 @@
       ORM-ish library for Go
        162 commits, last change: 2013-09-19 17:01:29, 400 stars, 77 forks
 
+    cypriss/golang-mux-benchmark:
+      Performance shootout of popular Go mux/routers/middleware web frameworks
+       25 commits, last change: 2013-12-10 20:27:35, 16 stars, 4 forks
+
     eaigner/hood:
       Database agnostic ORM for Go
        291 commits, last change: 2013-06-21 03:38:40, 370 stars, 44 forks
