@@ -6,6 +6,9 @@
   Api:
     - https://github.com/PuerkitoBio/martini-api-example
 
+  Authentication:
+    - http://words.volant.is/articles/authentication-golang-web-applications/
+
 
 ##Articles:
   - [Why I Wrote Gocraft Web, 2013.12](https://developer.uservoice.com/blog/2013/12/12/why-i-wrote-gocraft-web/)
